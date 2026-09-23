@@ -4,6 +4,7 @@ const cors = require('cors');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const ExcelJS = require('exceljs');
+const path = require('path');
 
 const app = express();
 app.use(cors());
@@ -18,9 +19,9 @@ const pool = new Pool({
 
 const PORT = process.env.PORT || 3000;
 
-// Ruta de prueba
+// Ruta principal: Carga el login (index.html) desde la carpeta layouts
 app.get('/', (req, res) => {
-  res.send('Servidor de CSV Partes funcionando y base de datos lista.');
+  res.sendFile(path.join(__dirname, 'layouts', 'index.html'));
 });
 
 // ==========================================
@@ -534,5 +535,5 @@ app.get('/api/jefe/:id_jefe/obras', async (req, res) => {
 // ENCENDIDO DEL SERVIDOR
 // ==========================================
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor backend escuchando en http://localhost:${PORT}`);
+  console.log(`🚀 Servidor backend escuchando en el puerto ${PORT}`);
 });
