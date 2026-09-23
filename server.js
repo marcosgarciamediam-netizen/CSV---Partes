@@ -4,7 +4,6 @@ const cors = require('cors');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const ExcelJS = require('exceljs');
-const path = require('path');
 
 const app = express();
 app.use(cors());
@@ -18,11 +17,6 @@ const pool = new Pool({
 });
 
 const PORT = process.env.PORT || 3000;
-
-// Ruta principal: Carga el login (index.html) desde la carpeta layouts
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'layouts', 'index.html'));
-});
 
 // ==========================================
 // RUTA: Inicio de Sesión (Login)
