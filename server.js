@@ -5,13 +5,14 @@ const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const ExcelJS = require('exceljs');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 app.use(cors());
-app.use(express.static('layouts'));
+app.use(express.static('layoutcsv')); // Apunta a tu carpeta real en GitHub
 app.use(express.json());
 
-// Configuración unificada de PostgreSQL (Conexión directa a Neon o variable de entorno)
+// Configuración unificada de PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_omC28xqezMVi@ep-silent-boat-zah0a480-pooler.c-2.eu-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require',
   ssl: { rejectUnauthorized: false }
@@ -20,10 +21,19 @@ const pool = new Pool({
 const PORT = process.env.PORT || 3000;
 
 // ==========================================
-// RUTA PRINCIPAL: Carga el login (index.html)
+// RUTA PRINCIPAL: Carga el login desde layoutcsv
 // ==========================================
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'layouts', 'index.html'));
+  const rutaLayouts = path.join(__dirname, 'layoutcsv', 'index.html');
+  const rutaRaiz = path.join(__dirname, 'index.html');
+
+  if (fs.existsSync(rutaLayouts)) {
+    res.sendFile(rutaLayouts);
+  } else if (fs.existsSync(rutaRaiz)) {
+    res.sendFile(rutaRaiz);
+  } else {
+    res.status(404).send('⚠️ No se encuentra el archivo index.html dentro de "layoutcsv".');
+  }
 });
 
 // ==========================================
