@@ -9,7 +9,7 @@ const fs = require('fs');
 
 const app = express();
 app.use(cors());
-app.use(express.static('layoutcsv')); // Apunta a tu carpeta real en GitHub
+app.use(express.static('layoutcsv'));
 app.use(express.json());
 
 // Configuración unificada de PostgreSQL
@@ -19,6 +19,24 @@ const pool = new Pool({
 });
 
 const PORT = process.env.PORT || 3000;
+
+// ==========================================
+// BLOQUE TEMPORAL: Forzar creación/actualización de admin@csv.com (Clave: 1234)
+// ==========================================
+pool.query('SELECT * FROM usuarios WHERE email = $1', ['admin@csv.com']).then(async (res) => {
+  const hashReal = await bcrypt.hash('1234', 10);
+  if (res.rows.length > 0) {
+    await pool.query('UPDATE usuarios SET password_hash = $1 WHERE email = $2', [hashReal, 'admin@csv.com']);
+    console.log('🔑 Contraseña de admin@csv.com actualizada correctamente a: 1234');
+  } else {
+    await pool.query(
+      `INSERT INTO usuarios (nombre, email, password_hash, rol, categoria, codigo_operario, activo) 
+       VALUES ('Administrador', 'admin@csv.com', $1, 'admin', 'Gerencia', '0001', true)`,
+      [hashReal]
+    );
+    console.log('👤 Usuario admin@csv.com creado con éxito con contraseña: 1234');
+  }
+}).catch(err => console.error('Error al actualizar password automáticamente:', err));
 
 // ==========================================
 // RUTA PRINCIPAL: Carga el login desde layoutcsv
