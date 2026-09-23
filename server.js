@@ -26,15 +26,15 @@ const PORT = process.env.PORT || 3000;
 pool.query('SELECT * FROM usuarios WHERE email = $1', ['admin@csv.com']).then(async (res) => {
   const hashReal = await bcrypt.hash('1234', 10);
   if (res.rows.length > 0) {
-    await pool.query('UPDATE usuarios SET password_hash = $1 WHERE email = $2', [hashReal, 'admin@csv.com']);
-    console.log('🔑 Contraseña de admin@csv.com actualizada correctamente a: 1234');
+    await pool.query('UPDATE usuarios SET password_hash = $1, rol = $2 WHERE email = $3', [hashReal, 'admin', 'admin@csv.com']);
+    console.log('🔑 Contraseña y rol de admin@csv.com actualizados correctamente.');
   } else {
     await pool.query(
       `INSERT INTO usuarios (nombre, email, password_hash, rol, categoria, codigo_operario, activo) 
        VALUES ('Administrador', 'admin@csv.com', $1, 'admin', 'Gerencia', '0001', true)`,
       [hashReal]
     );
-    console.log('👤 Usuario admin@csv.com creado con éxito con contraseña: 1234');
+    console.log('👤 Usuario admin@csv.com creado con éxito con rol admin y contraseña 1234.');
   }
 }).catch(err => console.error('Error al actualizar password automáticamente:', err));
 
@@ -82,6 +82,7 @@ app.post('/api/login', async (req, res) => {
       id_usuario: usuario.id_usuario,
       usuario: {
         id: usuario.id_usuario,
+        id_usuario: usuario.id_usuario,
         nombre: usuario.nombre,
         email: usuario.email,
         rol: usuario.rol,
