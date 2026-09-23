@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Construcción - Acceso al Sistema</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans flex items-center justify-center h-screen m-0">
+
+    <div class="bg-white p-8 rounded-2xl shadow-xl border-t-4 border-[#004b87] w-full max-w-md space-y-6">
+        
+        <div class="text-center space-y-2">
+            <div class="w-16 h-16 bg-[#ffcc00] rounded-2xl mx-auto flex items-center justify-center font-black text-[#004b87] text-2xl border-2 border-[#004b87] shadow-sm">
+                CSV
+            </div>
+            <h1 class="text-xl font-extrabold text-[#004b87]">Control de Partes y Obras</h1>
+            <p class="text-xs text-gray-500">Introduce tus credenciales para acceder a tu panel</p>
+        </div>
+
+        <form id="formLogin" onsubmit="realizarLogin(event)" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Correo Electrónico</label>
+                <input type="email" id="email" placeholder="usuario@csvconstruccion.com" class="w-full border border-gray-300 p-3 rounded-xl text-sm outline-none focus:border-[#004b87] transition bg-gray-50" required />
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Contraseña</label>
+                <input type="password" id="password" placeholder="••••••••" class="w-full border border-gray-300 p-3 rounded-xl text-sm outline-none focus:border-[#004b87] transition bg-gray-50" required />
+            </div>
+
+            <div id="mensajeError" class="hidden p-3 bg-red-50 border-l-4 border-red-600 text-red-700 text-xs font-semibold rounded"></div>
+
+            <button type="submit" class="w-full bg-[#ffcc00] text-[#004b87] font-extrabold text-sm py-3.5 rounded-xl shadow-md hover:bg-yellow-400 transition transform active:scale-[0.99]">
+                Iniciar Sesión
+            </button>
+        </form>
+
+        <div class="text-center text-[10px] text-gray-400 font-medium">
+            CSV Construcción S.L. &copy; 2026 - Todos los derechos reservados
+        </div>
+    </div>
+
+    <script>
+        async function realizarLogin(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const divError = document.getElementById('mensajeError');
+            divError.classList.add('hidden');
+
+            try {
+                const respuesta = await fetch('http://localhost:3000/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await respuesta.json();
+
+                if (data.success && data.usuario) {
+                    localStorage.setItem('usuario_id', data.usuario.id);
+                    localStorage.setItem('usuario_nombre', data.usuario.nombre);
+                    localStorage.setItem('usuario_rol', data.usuario.rol);
+
+                    const rolLimpio = (data.usuario.rol || '').toLowerCase().trim();
+
+                    switch (rolLimpio) {
+                        case 'admin':
+                        case 'administrador':
+                            window.location.href = 'admin.html';
+                            break;
+                        case 'encargado':
+                            window.location.href = 'encargado.html';
+                            break;
+                        case 'jefe_de_obra':
+                        case 'jefedeobra':
+                        case 'jefe de obra':
+                            window.location.href = 'jefedeobra.html';
+                            break;
+                        case 'operario':
+                            window.location.href = 'operario.html';
+                            break;
+                        default:
+                            divError.textContent = `⚠️ El rol "${data.usuario.rol}" no tiene una ruta asignada.`;
+                            divError.classList.remove('hidden');
+                            break;
+                    }
+                } else {
+                    divError.textContent = '❌ ' + (data.error || 'Correo o contraseña incorrectos.');
+                    divError.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error de conexión:', error);
+                divError.textContent = '❌ No se pudo conectar con el servidor backend.';
+                divError.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
