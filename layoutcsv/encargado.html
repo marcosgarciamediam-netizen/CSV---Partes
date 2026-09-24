@@ -81,13 +81,20 @@
                         </form>
                     </div>
 
-                    <!-- Columna Derecha: Historial y supervisión de partes recientes de la cuadrilla -->
+                    <!-- Columna Derecha: Historial y supervisión de partes recientes de la cuadrilla con paginación -->
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 lg:col-span-2 flex flex-col">
                         <h2 class="text-lg font-bold text-[#004b87] mb-2">Últimos Partes de la Cuadrilla</h2>
                         <p class="text-xs text-gray-600 mb-4">Supervisión en tiempo real de la actividad registrada por tus operarios.</p>
                         
-                        <div id="listaPartesCuadrilla" class="space-y-3 overflow-y-auto flex-1 max-h-[500px] pr-1">
+                        <div id="listaPartesCuadrilla" class="space-y-3 overflow-y-auto flex-1 max-h-[450px] pr-1">
                             <div class="p-4 text-center text-sm text-gray-400">Cargando partes...</div>
+                        </div>
+
+                        <!-- Controles de Paginación -->
+                        <div id="paginacionContenedor" class="flex justify-between items-center mt-4 pt-3 border-t border-gray-200 hidden">
+                            <button onclick="cambiarPagina(-1)" id="btnAnterior" class="bg-gray-100 text-[#004b87] font-bold text-xs px-4 py-2 rounded-lg hover:bg-gray-200 transition">◀ Anterior</button>
+                            <span id="textoPaginacion" class="text-xs font-semibold text-gray-600">Página 1 de 1</span>
+                            <button onclick="cambiarPagina(1)" id="btnSiguiente" class="bg-gray-100 text-[#004b87] font-bold text-xs px-4 py-2 rounded-lg hover:bg-gray-200 transition">Siguiente ▶</button>
                         </div>
                     </div>
 
@@ -98,6 +105,11 @@
     </div>
 
     <script>
+        let partesGlobal = [];
+        let listaObrasGlobal = [];
+        let paginaActual = 1;
+        const elementosPorPagina = 20;
+
         document.addEventListener('DOMContentLoaded', async () => {
             const nombreUser = localStorage.getItem('usuario_nombre');
             const idEncargado = localStorage.getItem('usuario_id');
@@ -130,7 +142,8 @@
                 selectObra.innerHTML = '<option value="">-- Selecciona obra --</option>';
                 
                 if (dataObras.success) {
-                    dataObras.obras.forEach(o => {
+                    listaObrasGlobal = dataObras.obras;
+                    listaObrasGlobal.forEach(o => {
                         selectObra.innerHTML += `<option value="${o.id_obra}">${o.nombre}</option>`;
                     });
                 }
@@ -143,33 +156,104 @@
             try {
                 const res = await fetch(`/api/encargado/${idEncargado}/partes`);
                 const data = await res.json();
-                const contenedor = document.getElementById('listaPartesCuadrilla');
-                contenedor.innerHTML = '';
 
                 if (data.success) {
-                    if (data.partes.length === 0) {
-                        contenedor.innerHTML = '<div class="p-6 bg-gray-50 text-center text-sm text-gray-500 border rounded-lg">No hay partes registrados recientes en tu cuadrilla.</div>';
-                        return;
-                    }
-
-                    data.partes.forEach(p => {
-                        const fechaFormateada = new Date(p.fecha).toLocaleDateString('es-ES');
-                        contenedor.innerHTML += `
-                            <div class="border border-gray-200 rounded-lg p-4 bg-white hover:shadow-sm transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                                <div>
-                                    <div class="font-bold text-gray-800 text-sm">${p.operario_nombre}</div>
-                                    <div class="text-xs font-semibold text-[#004b87]">🏗️ ${p.obra_nombre} <span class="text-gray-400 font-normal">| 📅 ${fechaFormateada}</span></div>
-                                    <div class="text-xs text-gray-600 mt-1 bg-gray-50 p-2 rounded">${p.tareas}</div>
-                                </div>
-                                <div class="bg-blue-50 text-[#004b87] px-3 py-1.5 rounded-lg font-black text-sm shrink-0">
-                                    ${p.horas}h
-                                </div>
-                            </div>
-                        `;
-                    });
+                    partesGlobal = data.partes;
+                    paginaActual = 1;
+                    renderizarTablaPartes();
                 }
             } catch (error) {
                 console.error("Error cargando partes:", error);
+            }
+        }
+
+        function renderizarTablaPartes() {
+            const contenedor = document.getElementById('listaPartesCuadrilla');
+            const contenedorPaginacion = document.getElementById('paginacionContenedor');
+            contenedor.innerHTML = '';
+
+            if (partesGlobal.length === 0) {
+                contenedor.innerHTML = '<div class="p-6 bg-gray-50 text-center text-sm text-gray-500 border rounded-lg">No hay partes registrados recientes en tu cuadrilla.</div>';
+                contenedorPaginacion.classList.add('hidden');
+                return;
+            }
+
+            contenedorPaginacion.classList.remove('hidden');
+
+            const totalPaginas = Math.ceil(partesGlobal.length / elementosPorPagina);
+            if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+            if (paginaActual < 1) paginaActual = 1;
+
+            const inicio = (paginaActual - 1) * elementosPorPagina;
+            const fin = inicio + elementosPorPagina;
+            const partesPagina = partesGlobal.slice(inicio, fin);
+
+            partesPagina.forEach(p => {
+                const fechaFormateada = new Date(p.fecha).toLocaleDateString('es-ES');
+                contenedor.innerHTML += `
+                    <div class="border border-gray-200 rounded-lg p-4 bg-white hover:shadow-sm transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 relative">
+                        <div>
+                            <div class="font-bold text-gray-800 text-sm">${p.operario_nombre}</div>
+                            <div class="text-xs font-semibold text-[#004b87]">🏗️ ${p.obra_nombre} <span class="text-gray-400 font-normal">| 📅 ${fechaFormateada}</span></div>
+                            <div class="text-xs text-gray-600 mt-1 bg-gray-50 p-2 rounded">${p.tareas}</div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="bg-blue-50 text-[#004b87] px-3 py-1.5 rounded-lg font-black text-sm shrink-0">
+                                ${p.horas}h
+                            </div>
+                            <button onclick="editarParte(${p.id_parte}, ${p.horas}, '${p.tareas.replace(/'/g, "\\'")}', ${p.id_obra})" class="bg-yellow-50 hover:bg-yellow-100 text-[#004b87] p-2 rounded-lg text-xs font-bold transition" title="Editar parte">✏️</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('textoPaginacion').textContent = `Página ${paginaActual} de ${totalPaginas || 1}`;
+            document.getElementById('btnAnterior').disabled = paginaActual === 1;
+            document.getElementById('btnSiguiente').disabled = paginaActual >= totalPaginas;
+        }
+
+        function cambiarPagina(direccion) {
+            paginaActual += direccion;
+            renderizarTablaPartes();
+        }
+
+        async function editarParte(idParte, horasActuales, tareasActuales, obraActual) {
+            const nuevasHoras = prompt("Modificar horas trabajadas:", horasActuales);
+            if (nuevasHoras === null) return;
+
+            const nuevasTareas = prompt("Modificar descripción de tareas:", tareasActuales);
+            if (nuevasTareas === null) return;
+
+            let listaTextoObras = listaObrasGlobal.map(o => `${o.id_obra} -> ${o.nombre}`).join('\n');
+            const nuevaObra = prompt(`Introduce el ID de la nueva obra:\n\n${listaTextoObras}`, obraActual);
+            if (nuevaObra === null) return;
+
+            const horasLimpias = parseFloat(nuevasHoras.replace(',', '.'));
+            const obraLimpia = parseInt(nuevaObra);
+
+            if (isNaN(horasLimpias) || isNaN(obraLimpia)) {
+                alert('❌ Datos incorrectos. Revisa las horas o el ID de obra.');
+                return;
+            }
+
+            try {
+                const respuesta = await fetch(`/api/partes/${idParte}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ horas: horasLimpias, tareas: nuevasTareas, id_obra: obraLimpia })
+                });
+
+                const resultado = await respuesta.json();
+                if (resultado.success) {
+                    alert('✅ ¡Parte modificado correctamente!');
+                    const idEncargado = localStorage.getItem('usuario_id');
+                    await cargarPartesCuadrilla(idEncargado);
+                } else {
+                    alert('❌ Error al modificar el parte.');
+                }
+            } catch (error) {
+                console.error('Error de conexión al editar:', error);
+                alert('❌ No se pudo conectar con el servidor.');
             }
         }
 
