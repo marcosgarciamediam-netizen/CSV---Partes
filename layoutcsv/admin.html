@@ -565,7 +565,6 @@
             const tareas = document.getElementById('modalTareas').value;
             let id_obra = document.getElementById('modalIdObraSeleccionada').value;
 
-            // Si el ID de obra está vacío pero el usuario escribió texto exacto, intentamos resolverlo
             if (!id_obra) {
                 const textoEscrito = document.getElementById('buscadorObraInput').value.trim();
                 const obraEncontrada = listaObrasGlobalAdmin.find(o => o.nombre.toLowerCase().trim() === textoEscrito.toLowerCase());
@@ -575,27 +574,34 @@
             }
 
             if (isNaN(horas) || !id_obra) {
-                alert('❌ Revisa que las horas sean correctas y hayas seleccionado una obra del buscador haciendo clic.');
+                alert('❌ Revisa que las horas sean correctas y hayas seleccionado una obra válida de la lista.');
                 return;
             }
+
+            const payload = { 
+                horas: horas, 
+                tareas: tareas, 
+                id_obra: parseInt(id_obra) 
+            };
 
             try {
                 const respuesta = await fetch(`/api/partes/${idParte}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ horas, tareas, id_obra })
+                    body: JSON.stringify(payload)
                 });
 
                 const resultado = await respuesta.json();
+
                 if (resultado.success) {
                     alert('✅ ¡Parte modificado correctamente!');
                     cerrarModalEdicion();
                     await buscarPartesFiltrados();
                 } else {
-                    alert('❌ Error al modificar el parte.');
+                    alert('❌ Error del servidor: ' + (resultado.error || 'No se pudo modificar el parte.'));
                 }
             } catch (error) {
-                console.error('Error de conexión al editar:', error);
+                console.error('Error de red al editar el parte:', error);
                 alert('❌ No se pudo conectar con el servidor.');
             }
         }
