@@ -3,394 +3,578 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Administración - CSV Construcción</title>
+    <title>CSV Admin - Panel de Control Total</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            html, body {
+                height: auto !important;
+                overflow: visible !important;
+                background: white !important;
+            }
+            body * { visibility: hidden; }
+            #vista-plantilla-pdf, #vista-plantilla-pdf * { visibility: visible; }
+            div.flex, main, div.flex-1 {
+                display: block !important;
+                height: auto !important;
+                overflow: visible !important;
+                position: static !important;
+            }
+            #vista-plantilla-pdf { 
+                position: absolute !important; 
+                left: 0 !important; 
+                top: 0 !important; 
+                width: 100% !important; 
+                max-width: none !important;
+                border: none !important; 
+                padding: 0 !important; 
+                margin: 0 !important;
+                box-shadow: none !important;
+                background: white !important;
+            }
+            .no-print { display: none !important; }
+        }
+    </style>
 </head>
-<body class="bg-gray-100 font-sans min-h-screen">
-
-    <div class="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
-        <!-- Cabecera -->
-        <header class="bg-white p-4 sm:p-6 rounded-2xl shadow-md border-t-4 border-[#004b87] flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div>
-                <h1 class="text-2xl font-black text-[#004b87]">CSV Construcción - Administración</h1>
-                <p class="text-xs text-gray-500">Panel de control general para la gestión de partes, obras y personal</p>
+<body class="bg-gray-100 font-sans">
+    
+    <div class="flex h-screen overflow-hidden relative">
+        
+        <!-- ================= SIDEBAR / MENÚ LATERAL DESPLEGABLE ================= -->
+        <div id="sidebar" class="fixed inset-y-0 left-0 z-30 w-72 bg-[#ffcc00] text-[#004b87] flex flex-col shadow-2xl border-r-4 border-[#004b87] overflow-y-auto shrink-0 transform -translate-x-full transition-transform duration-300 ease-in-out">
+            <div class="p-6 border-b border-yellow-500 flex items-center justify-between">
+                <div class="text-2xl font-extrabold tracking-tight">CSV Admin</div>
+                <div class="flex items-center gap-2">
+                    <a href="index.html" class="text-sm font-bold opacity-70 hover:opacity-100" title="Volver al selector">🏠</a>
+                    <button onclick="toggleSidebar()" class="text-lg font-bold p-1 hover:bg-yellow-400 rounded">✕</button>
+                </div>
             </div>
-            <div class="flex items-center gap-3">
-                <span id="nombreAdmin" class="text-sm font-bold text-gray-700"></span>
-                <button onclick="cerrarSesion()" class="bg-red-50 text-red-700 border border-red-200 px-4 py-2 rounded-xl text-xs font-bold hover:bg-red-100 transition">
-                    Cerrar Sesión
-                </button>
-            </div>
-        </header>
-
-        <!-- Navegación de Pestañas -->
-        <nav class="flex flex-wrap gap-2 bg-white p-3 rounded-2xl shadow-sm">
-            <button onclick="cambiarVista('partes')" id="btn-partes" class="px-4 py-2 rounded-xl text-xs font-bold transition bg-[#004b87] text-white">Partes de Trabajo</button>
-            <button onclick="cambiarVista('usuarios')" id="btn-usuarios" class="px-4 py-2 rounded-xl text-xs font-bold transition text-gray-600 hover:bg-gray-100">Usuarios y Personal</button>
-            <button onclick="cambiarVista('obras')" id="btn-obras" class="px-4 py-2 rounded-xl text-xs font-bold transition text-gray-600 hover:bg-gray-100">Obras</button>
-            <button onclick="cambiarVista('asignaciones')" id="btn-asignaciones" class="px-4 py-2 rounded-xl text-xs font-bold transition text-gray-600 hover:bg-gray-100">Asignaciones</button>
-        </nav>
-
-        <!-- Contenido Principal -->
-        <main class="space-y-6">
             
-            <!-- VISTA 1: PARTES -->
-            <section id="vista-partes" class="bg-white p-6 rounded-2xl shadow-md space-y-4">
-                <h2 class="text-lg font-extrabold text-[#004b87]">Filtro y Consulta de Partes de Trabajo</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">Operario</label>
-                        <select id="filtroOperario" class="w-full border border-gray-300 p-2.5 rounded-xl text-sm outline-none focus:border-[#004b87] bg-gray-50">
-                            <option value="">Todos los operarios</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">Obra</label>
-                        <select id="filtroObra" class="w-full border border-gray-300 p-2.5 rounded-xl text-sm outline-none focus:border-[#004b87] bg-gray-50">
-                            <option value="">Todas las obras</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">Fecha Inicio</label>
-                        <input type="date" id="filtroFechaInicio" class="w-full border border-gray-300 p-2.5 rounded-xl text-sm outline-none focus:border-[#004b87] bg-gray-50" />
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">Fecha Fin</label>
-                        <input type="date" id="filtroFechaFin" class="w-full border border-gray-300 p-2.5 rounded-xl text-sm outline-none focus:border-[#004b87] bg-gray-50" />
-                    </div>
-                </div>
-                <button onclick="buscarPartesFiltrados()" class="bg-[#004b87] text-white font-bold text-xs px-5 py-3 rounded-xl shadow hover:bg-[#003366] transition">
-                    Aplicar Filtros
+            <nav class="p-4 space-y-1.5 flex-1 overflow-y-auto font-semibold">
+                <button onclick="cambiarVista('dashboard')" id="btn-dashboard" class="w-full text-left p-3 rounded-lg bg-yellow-400 text-[#004b87] font-bold transition flex items-center gap-2 shadow-sm">
+                    <span>📊</span> Panel de Administración
                 </button>
+                <button onclick="cambiarVista('partes')" id="btn-partes" class="w-full text-left p-3 rounded-lg opacity-80 hover:bg-yellow-300 transition flex items-center gap-2">
+                    <span>📄</span> Partes
+                </button>
+                <button onclick="cambiarVista('obras')" id="btn-obras" class="w-full text-left p-3 rounded-lg opacity-80 hover:bg-yellow-300 transition flex items-center gap-2">
+                    <span>🏗️</span> Obras
+                </button>
+                <button onclick="cambiarVista('usuarios')" id="btn-usuarios" class="w-full text-left p-3 rounded-lg opacity-80 hover:bg-yellow-300 transition flex items-center gap-2">
+                    <span>👥</span> Usuarios
+                </button>
+                <button onclick="cambiarVista('quincena')" id="btn-quincena" class="w-full text-left p-3 rounded-lg opacity-80 hover:bg-yellow-300 transition flex items-center gap-2">
+                    <span>📅</span> Quincena
+                </button>
+                <button onclick="cambiarVista('dedicacion')" id="btn-dedicacion" class="w-full text-left p-3 rounded-lg opacity-80 hover:bg-yellow-300 transition flex items-center gap-2">
+                    <span>📈</span> Dedicación Jefes de Obra
+                </button>
+            </nav>
 
-                <div class="overflow-x-auto pt-4">
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead>
-                            <tr class="bg-gray-50 text-gray-600 uppercase text-[10px] tracking-wider border-b">
-                                <th class="p-3">Fecha</th>
-                                <th class="p-3">Operario</th>
-                                <th class="p-3">Obra</th>
-                                <th class="p-3">Horas</th>
-                                <th class="p-3">Tareas Realizadas</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaPartesBody" class="divide-y divide-gray-100 text-xs">
-                            <!-- Datos dinámicos -->
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+            <div class="p-3 text-[10px] opacity-70 text-center font-bold border-t border-yellow-500/50">CSV Partes v2.5</div>
+        </div>
 
-            <!-- VISTA 2: USUARIOS -->
-            <section id="vista-usuarios" class="bg-white p-6 rounded-2xl shadow-md space-y-4 hidden">
-                <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <h2 class="text-lg font-extrabold text-[#004b87]">Gestión de Personal y Usuarios</h2>
-                    <button onclick="abrirModalCrearUsuario()" class="bg-[#ffcc00] text-[#004b87] font-extrabold text-xs px-4 py-2.5 rounded-xl shadow hover:bg-yellow-400 transition">
-                        + Nuevo Usuario
+        <div id="sidebar-backdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-20 hidden"></div>
+
+        <!-- ================= CONTENIDO PRINCIPAL ================= -->
+        <div class="flex-1 flex flex-col overflow-hidden w-full">
+            <header class="bg-white p-4 md:p-6 shadow-sm flex justify-between items-center z-10 border-b border-gray-200">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="p-2 rounded-lg bg-yellow-100 text-[#004b87] hover:bg-yellow-200 transition font-bold flex items-center gap-2 text-sm shadow-sm">
+                        <span class="text-xl">☰</span> <span class="hidden sm:inline">Menú</span>
                     </button>
+                    <h1 id="titulo-seccion" class="text-lg md:text-2xl font-bold text-[#004b87]">Panel de Administración</h1>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead>
-                            <tr class="bg-gray-50 text-gray-600 uppercase text-[10px] tracking-wider border-b">
-                                <th class="p-3">Código</th>
-                                <th class="p-3">Nombre</th>
-                                <th class="p-3">Correo</th>
-                                <th class="p-3">Rol</th>
-                                <th class="p-3">Categoría</th>
-                                <th class="p-3">Estado</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaUsuariosBody" class="divide-y divide-gray-100 text-xs">
-                            <!-- Datos dinámicos -->
-                        </tbody>
-                    </table>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm font-bold text-[#004b87] hidden sm:inline">Administrador</span>
+                    <div class="w-10 h-10 bg-yellow-400 rounded-full border-2 border-[#004b87] flex items-center justify-center font-bold text-[#004b87]">A</div>
                 </div>
-            </section>
+            </header>
 
-            <!-- VISTA 3: OBRAS -->
-            <section id="vista-obras" class="bg-white p-6 rounded-2xl shadow-md space-y-4 hidden">
-                <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <h2 class="text-lg font-extrabold text-[#004b87]">Gestión de Obras</h2>
-                    <button onclick="crearObraNueva()" class="bg-[#ffcc00] text-[#004b87] font-extrabold text-xs px-4 py-2.5 rounded-xl shadow hover:bg-yellow-400 transition">
-                        + Nueva Obra
-                    </button>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead>
-                            <tr class="bg-gray-50 text-gray-600 uppercase text-[10px] tracking-wider border-b">
-                                <th class="p-3">ID Obra</th>
-                                <th class="p-3">Nombre de la Obra</th>
-                                <th class="p-3">Estado</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaObrasBody" class="divide-y divide-gray-100 text-xs">
-                            <!-- Datos dinámicos -->
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+            <main class="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50">
 
-            <!-- VISTA 4: ASIGNACIONES -->
-            <section id="vista-asignaciones" class="bg-white p-6 rounded-2xl shadow-md space-y-4 hidden">
-                <h2 class="text-lg font-extrabold text-[#004b87]">Panel de Asignaciones (Cuadrillas y Obras)</h2>
-                <p class="text-xs text-gray-500">Aquí puedes supervisar las asignaciones de operarios a encargados y obras a jefes de obra.</p>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                    <div class="p-4 bg-gray-50 rounded-xl border">
-                        <h3 class="font-bold text-sm text-[#004b87] mb-2">Asignaciones de Plantilla</h3>
-                        <div id="listaAsignacionesPlantilla" class="text-xs space-y-1 text-gray-600">Cargando...</div>
+                <!-- 1. VISTA: DASHBOARD -->
+                <section id="seccion-dashboard" class="vista-panel space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h2 class="text-lg font-bold text-red-700 flex items-center gap-2 mb-3">
+                            ⚠️ Alertas: Partes Pendientes de Hoy
+                        </h2>
+                        <p class="text-xs text-gray-500 mb-4">Operarios sin parte registrado en la fecha actual. Selecciona una acción para asignar partes o ausencias:</p>
+                        <div id="listaAlertas" class="space-y-3">
+                            <div class="p-4 rounded bg-gray-50 text-gray-500 text-sm">Cargando estado del personal...</div>
+                        </div>
                     </div>
-                    <div class="p-4 bg-gray-50 rounded-xl border">
-                        <h3 class="font-bold text-sm text-[#004b87] mb-2">Asignaciones de Obras a Jefes</h3>
-                        <div id="listaAsignacionesObras" class="text-xs space-y-1 text-gray-600">Cargando...</div>
-                    </div>
-                </div>
-            </section>
-        </main>
-    </div>
+                </section>
 
-    <!-- MODAL SIMPLE PARA CREAR USUARIO -->
-    <div id="modalUsuario" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md space-y-4">
-            <h3 class="text-lg font-extrabold text-[#004b87]">Crear Nuevo Usuario</h3>
-            <form id="formCrearUsuario" onsubmit="guardarNuevoUsuario(event)" class="space-y-3">
-                <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">Nombre Completo</label>
-                    <input type="text" id="nuevoNombre" class="w-full border p-2.5 rounded-xl text-sm" required />
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">Correo Electrónico</label>
-                    <input type="email" id="nuevoEmail" class="w-full border p-2.5 rounded-xl text-sm" required />
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">Contraseña Inicial</label>
-                    <input type="password" id="nuevoPassword" placeholder="Por defecto 123456" class="w-full border p-2.5 rounded-xl text-sm" />
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">Rol</label>
-                        <select id="nuevoRol" class="w-full border p-2.5 rounded-xl text-sm">
-                            <option value="operario">Operario</option>
-                            <option value="encargado">Encargado</option>
-                            <option value="jefe_de_obra">Jefe de Obra</option>
-                            <option value="admin">Admin</option>
-                        </select>
+                <!-- 2. VISTA: PARTES -->
+                <section id="seccion-partes" class="vista-panel hidden space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 no-print">
+                            <div>
+                                <h2 class="text-lg font-bold text-[#004b87]">Generación de Informes en PDF</h2>
+                                <p class="text-xs text-gray-600">Filtra por operario, obra o rango de fechas para obtener el parte con diseño oficial[cite: 1].</p>
+                            </div>
+                            <button onclick="window.print()" class="bg-[#004b87] text-white font-bold text-xs px-5 py-3 rounded-lg shadow hover:bg-blue-900 transition flex items-center gap-2">
+                                <span>📄</span> Imprimir / Descargar PDF
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200 no-print">
+                            <div>
+                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Operario</label>
+                                <select id="filtroOperario" class="w-full border border-gray-300 p-2 rounded-lg bg-white text-sm outline-none">
+                                    <option value="">-- Todos los operarios --</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Obra</label>
+                                <select id="filtroObra" class="w-full border border-gray-300 p-2 rounded-lg bg-white text-sm outline-none">
+                                    <option value="">-- Todas las obras --</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Desde Fecha</label>
+                                <input type="date" id="filtroFechaInicio" class="w-full border border-gray-300 p-2 rounded-lg bg-white text-sm outline-none" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Hasta Fecha</label>
+                                <input type="date" id="filtroFechaFin" class="w-full border border-gray-300 p-2 rounded-lg bg-white text-sm outline-none" />
+                            </div>
+                        </div>
+                        <div class="mb-6 no-print flex flex-wrap gap-3">
+                            <button onclick="buscarPartesFiltrados()" class="bg-[#ffcc00] text-[#004b87] font-bold text-xs px-5 py-2.5 rounded-lg shadow hover:bg-yellow-400 transition">
+                                🔍 Aplicar Filtros
+                            </button>
+                            <button onclick="limpiarFiltros()" class="bg-gray-200 text-gray-700 font-bold text-xs px-4 py-2.5 rounded-lg hover:bg-gray-300 transition">
+                                Limpiar Filtros
+                            </button>
+                        </div>
+
+                        <div id="vista-plantilla-pdf" class="bg-white p-8 rounded-lg border border-gray-300 max-w-2xl mx-auto space-y-6 font-sans">
+                            <div class="flex justify-between items-start border-b-2 border-gray-800 pb-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-12 h-12 bg-[#ffcc00] rounded-xl flex items-center justify-center font-black text-[#004b87] text-xl border-2 border-[#004b87] shadow-sm">
+                                        CSV
+                                    </div>
+                                    <div>
+                                        <h1 class="text-lg font-extrabold text-gray-900">Informe de Partes de Trabajo</h1>
+                                        <p id="infoPeriodo" class="text-xs text-gray-600 font-medium">Período: General</p>
+                                    </div>
+                                </div>
+                                <div class="text-right text-xs text-gray-500">
+                                    <span class="font-bold text-gray-700">Emisión:</span> <span id="fechaEmision"></span>
+                                </div>
+                            </div>
+
+                            <div id="contenedorPlantillaPartes" class="space-y-6">
+                                <div class="text-center text-gray-400 py-8 text-sm">Selecciona los filtros y haz clic en "Aplicar Filtros".</div>
+                            </div>
+
+                            <div class="pt-6 border-t border-gray-200 flex justify-between text-xs text-gray-500 font-medium">
+                                <div>CSV Construcción S.L.</div>
+                                <div>Página 1</div>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">Categoría</label>
-                        <input type="text" id="nuevaCategoria" value="Oficial" class="w-full border p-2.5 rounded-xl text-sm" />
+                </section>
+
+                <!-- 3. VISTA: OBRAS -->
+                <section id="seccion-obras" class="vista-panel hidden space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h2 class="text-lg font-bold text-[#004b87] mb-2">Gestión de Obras</h2>
+                        <p class="text-xs text-gray-600 mb-4">Crea nuevas obras o habilita/deshabilita las existentes en el sistema.</p>
+                        
+                        <form id="formNuevaObra" onsubmit="crearObra(event)" class="flex gap-3 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <input type="text" id="nombreNuevaObra" placeholder="Nombre de la nueva obra..." class="flex-1 border border-gray-300 p-2 rounded-lg text-sm outline-none" required />
+                            <button type="submit" class="bg-[#ffcc00] text-[#004b87] font-bold text-xs px-5 py-2 rounded-lg shadow hover:bg-yellow-400 transition">
+                                ➕ Añadir Obra
+                            </button>
+                        </form>
+
+                        <div id="listaObrasAdmin" class="space-y-2">
+                            <div class="p-4 bg-gray-50 rounded text-sm text-gray-500">Cargando obras...</div>
+                        </div>
                     </div>
-                </div>
-                <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" onclick="cerrarModalUsuario()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-xs font-bold">Cancelar</button>
-                    <button type="submit" class="bg-[#004b87] text-white px-4 py-2 rounded-xl text-xs font-bold">Guardar Usuario</button>
-                </div>
-            </form>
+                </section>
+
+                <!-- 4. VISTA: USUARIOS -->
+                <section id="seccion-usuarios" class="vista-panel hidden space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h2 class="text-lg font-bold text-[#004b87]">Gestión de Personal y Roles</h2>
+                                <p class="text-xs text-gray-600">Da de alta, edita datos, restablece contraseñas o filtra a los trabajadores del sistema.</p>
+                            </div>
+                        </div>
+
+                        <form id="formNuevoUsuario" onsubmit="crearUsuario(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <input type="text" id="codigoOperario" placeholder="Código de Empleado (ej: 564)" class="border border-gray-300 p-2 rounded-lg text-sm outline-none bg-white font-bold" required />
+                            <input type="text" id="nombreUsuario" placeholder="Nombre y Apellidos" class="border border-gray-300 p-2 rounded-lg text-sm outline-none bg-white" required />
+                            <input type="email" id="emailUsuario" placeholder="Correo electrónico" class="border border-gray-300 p-2 rounded-lg text-sm outline-none bg-white" required />
+                            <input type="password" id="passUsuario" placeholder="Contraseña temporal" class="border border-gray-300 p-2 rounded-lg text-sm outline-none bg-white" required />
+                            <select id="rolUsuario" class="border border-gray-300 p-2 rounded-lg text-sm outline-none bg-white font-semibold">
+                                <option value="operario">Operario</option>
+                                <option value="encargado">Encargado</option>
+                                <option value="jefe_de_obra">Jefe de Obra</option>
+                                <option value="admin">Administrador</option>
+                            </select>
+                            <input type="text" id="categoriaUsuario" placeholder="Categoría (ej: Electricidad)" class="border border-gray-300 p-2 rounded-lg text-sm outline-none bg-white" required />
+                            <button type="submit" class="bg-[#ffcc00] text-[#004b87] font-bold text-xs px-5 py-2.5 rounded-lg shadow hover:bg-yellow-400 transition sm:col-span-2 lg:col-span-3">
+                                ➕ Registrar Nuevo Trabajador
+                            </button>
+                        </form>
+
+                        <!-- Filtros de Búsqueda Rápida para la Lista de Usuarios -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <div>
+                                <label class="block text-[10px] font-bold text-[#004b87] uppercase mb-1">🔍 Filtrar por Nombre</label>
+                                <input type="text" id="busqNombre" placeholder="Escribe un nombre..." oninput="filtrarUsuariosLista()" class="w-full border border-gray-300 p-2 rounded-lg text-xs outline-none bg-white" />
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-[#004b87] uppercase mb-1">🔍 Filtrar por Código</label>
+                                <input type="text" id="busqCodigo" placeholder="Escribe un código..." oninput="filtrarUsuariosLista()" class="w-full border border-gray-300 p-2 rounded-lg text-xs outline-none bg-white" />
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-[#004b87] uppercase mb-1">🔍 Filtrar por Categoría</label>
+                                <input type="text" id="busqCategoria" placeholder="Escribe una categoría..." oninput="filtrarUsuariosLista()" class="w-full border border-gray-300 p-2 rounded-lg text-xs outline-none bg-white" />
+                            </div>
+                        </div>
+
+                        <div id="listaUsuariosAdmin" class="space-y-2">
+                            <div class="p-4 bg-gray-50 rounded text-sm text-gray-500">Cargando usuarios...</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. VISTA: QUINCENA -->
+                <section id="seccion-quincena" class="vista-panel hidden space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 max-w-xl">
+                        <h2 class="text-lg font-bold text-[#004b87] mb-2">Centro de Exportación Quincenal</h2>
+                        <p class="text-xs text-gray-600 mb-5">Selecciona el periodo para descargar el informe en Excel con colores automáticos (Vacaciones: Rosa, Baja: Verde, Permiso: Azul).</p>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Periodo de Exportación</label>
+                                <select id="selectorPeriodo" onchange="cambiarPeriodo()" class="w-full border border-gray-300 p-2.5 rounded-lg bg-gray-50 text-sm outline-none font-semibold">
+                                    <option value="q1_actual">1ª Quincena (Mes Actual)</option>
+                                    <option value="q2_actual">2ª Quincena (Mes Actual)</option>
+                                    <option value="q1_anterior">1ª Quincena (Mes Anterior)</option>
+                                    <option value="q2_anterior">2ª Quincena (Mes Anterior)</option>
+                                    <option value="personalizado">📅 Rango Personalizado (Calendario)</option>
+                                </select>
+                            </div>
+
+                            <div id="bloquePersonalizado" class="hidden grid grid-cols-2 gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                                <div>
+                                    <label class="block text-[10px] font-bold uppercase text-[#004b87]">Desde</label>
+                                    <input type="date" id="fechaInicio" class="w-full border border-gray-300 p-1.5 rounded bg-white text-xs outline-none" />
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold uppercase text-[#004b87]">Hasta</label>
+                                    <input type="date" id="fechaFin" class="w-full border border-gray-300 p-1.5 rounded bg-white text-xs outline-none" />
+                                </div>
+                            </div>
+
+                            <button onclick="descargarInforme()" class="w-full bg-[#004b87] text-white font-bold text-sm py-3 rounded-lg shadow hover:bg-blue-900 transition flex items-center justify-center gap-2">
+                                📥 Descargar Informe en Excel (Con Colores)
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. VISTA: DEDICACIÓN MENSUAL DE JEFES DE OBRA -->
+                <section id="seccion-dedicacion" class="vista-panel hidden space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h2 class="text-lg font-bold text-[#004b87] mb-2">Dedicación Mensual de Jefes de Obra</h2>
+                        <p class="text-xs text-gray-600 mb-4">Resumen de supervisión y horas acumuladas por obra durante el mes actual.</p>
+                        <div class="p-6 bg-yellow-50 border border-yellow-200 rounded-lg text-center text-sm text-[#004b87] font-semibold">
+                            📊 Módulo preparado para control de dedicación ejecutiva y asignaciones de obra.
+                        </div>
+                    </div>
+                </section>
+
+            </main>
         </div>
     </div>
 
+    <!-- ================= SCRIPT DE CONTROL Y NAVEGACIÓN ================= -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const nombre = localStorage.getItem('usuario_nombre') || 'Administrador';
-            document.getElementById('nombreAdmin').textContent = `Hola, ${nombre}`;
-            
-            cargarFiltrosPartes();
-            buscarPartesFiltrados();
-        });
+        const nombresSecciones = {
+            'dashboard': 'Panel de Administración',
+            'partes': 'Gestión de Partes de Trabajo',
+            'obras': 'Gestión de Obras',
+            'usuarios': 'Gestión de Usuarios',
+            'quincena': 'Exportación Quincenal',
+            'dedicacion': 'Dedicación Mensual de Jefes de Obra'
+        };
 
-        function cerrarSesion() {
-            localStorage.clear();
-            window.location.href = 'index.html';
+        let todosLosUsuariosGlobal = [];
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            sidebar.classList.toggle('-translate-x-full');
+            backdrop.classList.toggle('hidden');
         }
 
-        function cambiarVista(vista) {
-            ['partes', 'usuarios', 'obras', 'asignaciones'].forEach(v => {
-                document.getElementById(`vista-${v}`).classList.add('hidden');
-                document.getElementById(`btn-${v}`).className = "px-4 py-2 rounded-xl text-xs font-bold transition text-gray-600 hover:bg-gray-100";
+        function cambiarVista(nombreVista) {
+            document.querySelectorAll('.vista-panel').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`seccion-${nombreVista}`).classList.remove('hidden');
+            document.getElementById('titulo-seccion').textContent = nombresSecciones[nombreVista];
+
+            document.querySelectorAll('nav button').forEach(btn => {
+                btn.classList.remove('bg-yellow-400', 'font-bold', 'shadow-sm');
+                btn.classList.add('opacity-80');
             });
+            const botonActivo = document.getElementById(`btn-${nombreVista}`);
+            botonActivo.classList.add('bg-yellow-400', 'font-bold', 'shadow-sm');
+            botonActivo.classList.remove('opacity-80');
 
-            document.getElementById(`vista-${vista}`).classList.remove('hidden');
-            document.getElementById(`btn-${vista}`).className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-[#004b87] text-white";
+            toggleSidebar();
 
-            if (vista === 'partes') buscarPartesFiltrados();
-            if (vista === 'usuarios') cargarUsuariosAdmin();
-            if (vista === 'obras') cargarObrasAdmin();
-            if (vista === 'asignaciones') cargarAsignacionesAdmin();
+            if (nombreVista === 'obras') cargarObrasAdmin();
+            if (nombreVista === 'usuarios') cargarUsuariosAdmin();
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('fechaEmision').textContent = new Date().toLocaleDateString('es-ES');
+            await cargarAlertas();
+            await cargarFiltrosPartes();
+            await buscarPartesFiltrados();
+        });
+
+        async function cargarAlertas() {
+            try {
+                const res = await fetch('/api/admin/alertas');
+                const data = await res.json();
+                const contenedor = document.getElementById('listaAlertas');
+                contenedor.innerHTML = '';
+                if(data.success) {
+                    if(data.alertas.length === 0) {
+                        contenedor.innerHTML = '<div class="bg-green-50 border-l-4 border-green-600 p-4 rounded text-green-900 text-sm font-semibold">✅ ¡Excelente! Todos los operarios han entregado su parte de hoy.</div>';
+                        return;
+                    }
+                    data.alertas.forEach(op => {
+                        const div = document.createElement('div');
+                        div.className = 'bg-white border-l-4 border-red-600 p-4 rounded text-red-900 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-sm';
+                        div.innerHTML = `
+                            <div><strong>${op.nombre}</strong> (Cód: ${op.codigo_operario}) no ha introducido el parte de hoy.</div>
+                            <div class="flex items-center gap-2 w-full sm:w-auto">
+                                <select onchange="gestionarAccionOperario(${op.id_usuario}, '${op.nombre}', this)" class="border border-gray-300 p-2 rounded text-xs bg-yellow-50 text-[#004b87] font-bold outline-none cursor-pointer">
+                                    <option value="" disabled selected>⚡ Asignar estado / parte...</option>
+                                    <option value="hacer_parte">1. 📝 Hacer parte (Rellenar por Admin)</option>
+                                    <option value="vacaciones">🏖️ Vacaciones (8h - Rosa)</option>
+                                    <option value="permiso">⏱️ Horas de Permiso (Azul)</option>
+                                    <option value="baja">🏥 Baja Médica (8h - Verde)</option>
+                                    <option value="paternidad">👶 Paternidad (P)</option>
+                                </select>
+                            </div>
+                        `;
+                        contenedor.appendChild(div);
+                    });
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function gestionarAccionOperario(idUsuario, nombreOperario, selectElement) {
+            const accion = selectElement.value;
+            selectElement.value = ""; 
+
+            const hoy = new Date().toISOString().split('T')[0];
+
+            if (accion === 'hacer_parte') {
+                const horas = prompt(`Rellenar horas para ${nombreOperario}:`, "8");
+                if (horas === null) return;
+                const tareas = prompt(`Descripción de tareas para ${nombreOperario}:`, "Trabajos de obra asignados");
+                if (tareas === null) return;
+                const fechaParte = prompt(`Fecha del parte (AAAA-MM-DD):`, hoy);
+                if (fechaParte === null) return;
+
+                await enviarEstadoEspecial(idUsuario, fechaParte, 'trabajo', parseFloat(horas), tareas);
+
+            } else if (accion === 'vacaciones') {
+                const fechaVacacion = prompt(`Fecha de vacaciones (AAAA-MM-DD):`, hoy);
+                if (fechaVacacion === null) return;
+                await enviarEstadoEspecial(idUsuario, fechaVacacion, 'vacaciones', 8, 'Vacaciones');
+
+            } else if (accion === 'baja') {
+                const fechaBaja = prompt(`Fecha de baja médica (AAAA-MM-DD):`, hoy);
+                if (fechaBaja === null) return;
+                await enviarEstadoEspecial(idUsuario, fechaBaja, 'baja', 8, 'Baja Médica');
+
+            } else if (accion === 'paternidad') {
+                const fechaPat = prompt(`Fecha de paternidad (AAAA-MM-DD):`, hoy);
+                if (fechaPat === null) return;
+                await enviarEstadoEspecial(idUsuario, fechaPat, 'paternidad', 8, 'Permiso por Paternidad');
+
+            } else if (accion === 'permiso') {
+                const horasPermiso = prompt(`Número de horas de permiso:`, "4");
+                if (horasPermiso === null) return;
+                const fechaPermiso = prompt(`Fecha de permiso (AAAA-MM-DD):`, hoy);
+                if (fechaPermiso === null) return;
+                await enviarEstadoEspecial(idUsuario, fechaPermiso, 'permiso', parseFloat(horasPermiso), 'Horas de Permiso');
+            }
+        }
+
+        async function enviarEstadoEspecial(idUsuario, fecha, tipo, horas, tareas) {
+            try {
+                const respuesta = await fetch('/api/admin/estado-especial', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id_usuario: idUsuario, fecha, tipo, horas, tareas, id_obra: 1 })
+                });
+                const resultado = await respuesta.json();
+                if (resultado.success) {
+                    alert('✅ ¡Estado registrado y asignado correctamente!');
+                    await cargarAlertas();
+                    await buscarPartesFiltrados();
+                } else {
+                    alert('❌ Error al registrar el estado.');
+                }
+            } catch (error) {
+                console.error('Error de conexión:', error);
+                alert('❌ No se pudo conectar con el servidor.');
+            }
         }
 
         async function cargarFiltrosPartes() {
             try {
-                const resOp = await fetch('/api/admin/operarios');
-                const dataOp = await resOp.json();
-                if(dataOp.success) {
-                    const selectOp = document.getElementById('filtroOperario');
-                    selectOp.innerHTML = '<option value="">Todos los operarios</option>';
-                    dataOp.operarios.forEach(op => {
-                        selectOp.innerHTML += `<option value="${op.id_usuario}">${op.nombre}</option>`;
-                    });
+                const resOps = await fetch('/api/admin/operarios');
+                const dataOps = await resOps.json();
+                if(dataOps.success) {
+                    const sel = document.getElementById('filtroOperario');
+                    dataOps.operarios.forEach(o => sel.innerHTML += `<option value="${o.id_usuario}">${o.nombre}</option>`);
                 }
-
-                const resOb = await fetch('/api/obras');
-                const dataOb = await resOb.json();
-                if(dataOb.success) {
-                    const selectOb = document.getElementById('filtroObra');
-                    selectOb.innerHTML = '<option value="">Todas las obras</option>';
-                    dataOb.obras.forEach(ob => {
-                        selectOb.innerHTML += `<option value="${ob.id_obra}">${ob.nombre}</option>`;
-                    });
+                const resObras = await fetch('/api/obras');
+                const dataObras = await resObras.json();
+                if(dataObras.success) {
+                    const sel = document.getElementById('filtroObra');
+                    dataObras.obras.forEach(o => sel.innerHTML += `<option value="${o.id_obra}">${o.nombre}</option>`);
                 }
-            } catch (err) {
-                console.error("Error cargando filtros:", err);
-            }
+            } catch(e) { console.error(e); }
         }
 
         async function buscarPartesFiltrados() {
-            const id_usuario = document.getElementById('filtroOperario').value;
-            const id_obra = document.getElementById('filtroObra').value;
-            const fecha_inicio = document.getElementById('filtroFechaInicio').value;
-            const fecha_fin = document.getElementById('filtroFechaFin').value;
+            const op = document.getElementById('filtroOperario').value;
+            const obra = document.getElementById('filtroObra').value;
+            const fechaInicio = document.getElementById('filtroFechaInicio').value;
+            const fechaFin = document.getElementById('filtroFechaFin').value;
 
             try {
-                const url = `/api/admin/partes-filtrados?id_usuario=${id_usuario}&id_obra=${id_obra}&fecha_inicio=${fecha_inicio}&fecha_fin=${fecha_fin}`;
+                const url = `/api/admin/partes-filtrados?id_usuario=${op}&id_obra=${obra}&fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`;
                 const res = await fetch(url);
                 const data = await res.json();
-                
-                const tbody = document.getElementById('tablaPartesBody');
-                tbody.innerHTML = '';
+                const contenedor = document.getElementById('contenedorPlantillaPartes');
+                contenedor.innerHTML = '';
 
-                if(data.success && data.partes.length > 0) {
+                if (data.success) {
+                    if (data.partes.length === 0) {
+                        contenedor.innerHTML = `<div class="p-4 text-center text-gray-500 text-sm">No se encontraron partes con los filtros seleccionados.</div>`;
+                        document.getElementById('infoPeriodo').textContent = `Período: Sin registros`;
+                        return;
+                    }
+
+                    if (fechaInicio && fechaFin) {
+                        document.getElementById('infoPeriodo').textContent = `Período: ${fechaInicio} -> ${fechaFin}`;
+                    } else if (fechaInicio) {
+                        document.getElementById('infoPeriodo').textContent = `Período: Desde ${fechaInicio}`;
+                    } else {
+                        document.getElementById('infoPeriodo').textContent = `Período: Histórico Filtrado`;
+                    }
+
+                    let totalHorasGlobal = 0;
+
                     data.partes.forEach(p => {
-                        tbody.innerHTML += `
-                            <tr class="hover:bg-gray-50 border-b border-gray-50">
-                                <td class="p-3 font-medium">${p.fecha_registro}</td>
-                                <td class="p-3 font-bold text-[#004b87]">${p.operario_nombre}</td>
-                                <td class="p-3">${p.obra_nombre}</td>
-                                <td class="p-3 font-semibold">${p.horas}h</td>
-                                <td class="p-3 text-gray-600">${p.tareas || '-'}</td>
-                            </tr>
+                        totalHorasGlobal += parseFloat(p.horas || 0);
+                        const fechaParte = new Date(p.fecha).toLocaleDateString('es-ES');
+                        const categoriaOperario = p.categoria || 'Operario General';
+                        const fechaReg = p.fecha_registro || 'Reciente';
+
+                        let etiquetaTipo = "";
+                        if(p.tipo === 'vacaciones') etiquetaTipo = " <span class='bg-pink-100 text-pink-700 px-2 py-0.5 rounded text-[10px] font-bold'>VACACIONES</span>";
+                        else if(p.tipo === 'baja') etiquetaTipo = " <span class='bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px] font-bold'>BAJA MÉDICA</span>";
+                        else if(p.tipo === 'permiso') etiquetaTipo = " <span class='bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold'>PERMISO</span>";
+                        else if(p.tipo === 'paternidad') etiquetaTipo = " <span class='bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[10px] font-bold'>PATERNIDAD (P)</span>";
+
+                        const bloque = document.createElement('div');
+                        bloque.className = 'border-b border-gray-200 pb-6 space-y-3';
+                        bloque.innerHTML = `
+                            <div class="text-sm font-bold text-gray-900 flex justify-between items-center">
+                                <span>${p.operario_nombre}</span>
+                                ${etiquetaTipo}
+                            </div>
+                            <div class="text-xs font-semibold text-[#004b87] bg-yellow-50 p-2 rounded border border-yellow-200">
+                                [${p.codigo_operario || '000'}] ${p.obra_nombre}
+                            </div>
+                            <div class="text-xs text-gray-700 font-medium">
+                                <span>${p.operario_nombre} | ${categoriaOperario}</span>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 text-xs space-y-1">
+                                <div class="flex justify-between font-bold text-gray-800">
+                                    <span>${fechaParte}</span>
+                                    <span class="text-[#004b87]">${p.tipo === 'paternidad' ? 'P' : p.horas + 'h'}</span>
+                                </div>
+                                <div class="text-gray-600">${p.tareas}</div>
+                            </div>
+                            <div class="text-[11px] text-gray-400 italic flex justify-between">
+                                <span>Registrado el ${fechaReg}</span>
+                                <span class="font-bold text-gray-700">Total: ${p.tipo === 'paternidad' ? 'P' : p.horas + 'h'}</span>
+                            </div>
                         `;
+                        contenedor.appendChild(bloque);
                     });
-                } else {
-                    tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-400">No se encontraron partes de trabajo.</td></tr>`;
+
+                    if (data.partes.length > 1) {
+                        const totalDiv = document.createElement('div');
+                        totalDiv.className = 'text-right font-extrabold text-sm text-[#004b87] pt-2';
+                        totalDiv.textContent = `Total Acumulado del Informe: ${totalHorasGlobal}h`;
+                        contenedor.appendChild(totalDiv);
+                    }
                 }
-            } catch (err) {
-                console.error("Error al buscar partes:", err);
+            } catch (e) {
+                console.error('Error al generar vista de partes:', e);
             }
         }
 
-        async function cargarUsuariosAdmin() {
-            try {
-                const res = await fetch('/api/admin/usuarios-todos');
-                const data = await res.json();
-                const tbody = document.getElementById('tablaUsuariosBody');
-                tbody.innerHTML = '';
-
-                if(data.success) {
-                    data.usuarios.forEach(u => {
-                        tbody.innerHTML += `
-                            <tr class="hover:bg-gray-50 border-b border-gray-50">
-                                <td class="p-3 font-mono text-gray-500">${u.codigo_operario || '-'}</td>
-                                <td class="p-3 font-bold text-[#004b87]">${u.nombre}</td>
-                                <td class="p-3 text-gray-600">${u.email}</td>
-                                <td class="p-3 uppercase font-semibold text-[10px] text-blue-600">${u.rol}</td>
-                                <td class="p-3">${u.categoria || '-'}</td>
-                                <td class="p-3">${u.activo ? '✅ Activo' : '❌ Inactivo'}</td>
-                            </tr>
-                        `;
-                    });
-                }
-            } catch (err) {
-                console.error("Error cargando usuarios:", err);
-            }
+        function limpiarFiltros() {
+            document.getElementById('filtroOperario').value = '';
+            document.getElementById('filtroObra').value = '';
+            document.getElementById('filtroFechaInicio').value = '';
+            document.getElementById('filtroFechaFin').value = '';
+            buscarPartesFiltrados();
         }
 
         async function cargarObrasAdmin() {
             try {
                 const res = await fetch('/api/admin/obras-todas');
                 const data = await res.json();
-                const tbody = document.getElementById('tablaObrasBody');
-                tbody.innerHTML = '';
-
+                const contenedor = document.getElementById('listaObrasAdmin');
+                contenedor.innerHTML = '';
                 if(data.success) {
                     data.obras.forEach(o => {
-                        tbody.innerHTML += `
-                            <tr class="hover:bg-gray-50 border-b border-gray-50">
-                                <td class="p-3 font-mono text-gray-500">${o.id_obra}</td>
-                                <td class="p-3 font-bold text-[#004b87]">${o.nombre}</td>
-                                <td class="p-3">${o.activo ? '✅ Activa' : '❌ Inactiva'}</td>
-                            </tr>
-                        `;
+                        const estadoClase = o.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+                        const textoEstado = o.activo ? 'Activa' : 'Deshabilitada';
+                        const botonTexto = o.activo ? 'Deshabilitar' : 'Habilitar';
+                        const botonClase = o.activo ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100';
+
+                        contenedor.innerHTML += `
+                            <div class="p-3 bg-white border rounded shadow-sm text-sm flex justify-between items-center">
+                                <div class="flex items-center gap-3">
+                                    <span class="font-bold text-[#004b87]">🏗️ ${o.nombre}</span>
+                                    <span class="text-xs px-2 py-0.5 rounded font-bold ${estadoClase}">${textoEstado}</span>
+                                </div>
+                                <button onclick="toggleEstadoObra(${o.id_obra}, ${!o.activo})" class="text-xs font-bold px-3 py-1 rounded transition ${botonClase}">
+                                    ${botonTexto}
+                                </button>
+                            </div>`;
                     });
                 }
-            } catch (err) {
-                console.error("Error cargando obras:", err);
-            }
+            } catch(e) { console.error(e); }
         }
 
-        async function cargarAsignacionesAdmin() {
-            try {
-                const resP = await fetch('/api/admin/asignaciones-plantilla');
-                const dataP = await resP.json();
-                const divP = document.getElementById('listaAsignacionesPlantilla');
-                if(dataP.success && dataP.asignaciones.length > 0) {
-                    divP.innerHTML = dataP.asignaciones.map(a => `<div>• <b>${a.encargado_nombre}</b> encarga a ${a.operario_nombre}</div>`).join('');
-                } else {
-                    divP.innerHTML = '<span class="text-gray-400">No hay asignaciones de plantilla.</span>';
-                }
-
-                const resO = await fetch('/api/admin/asignaciones-obras');
-                const dataO = await resO.json();
-                const divO = document.getElementById('listaAsignacionesObras');
-                if(dataO.success && dataO.asignaciones.length > 0) {
-                    divO.innerHTML = dataO.asignaciones.map(a => `<div>• <b>${a.jefe_nombre}</b> dirige ${a.obra_nombre}</div>`).join('');
-                } else {
-                    divO.innerHTML = '<span class="text-gray-400">No hay asignaciones de obras a jefes.</span>';
-                }
-            } catch (err) {
-                console.error("Error cargando asignaciones:", err);
-            }
-        }
-
-        function abrirModalCrearUsuario() {
-            document.getElementById('modalUsuario').classList.remove('hidden');
-        }
-
-        function cerrarModalUsuario() {
-            document.getElementById('modalUsuario').classList.add('hidden');
-        }
-
-        async function guardarNuevoUsuario(e) {
+        async function crearObra(e) {
             e.preventDefault();
-            const nombre = document.getElementById('nuevoNombre').value;
-            const email = document.getElementById('nuevoEmail').value;
-            const password = document.getElementById('nuevoPassword').value;
-            const rol = document.getElementById('nuevoRol').value;
-            const categoria = document.getElementById('nuevaCategoria').value;
-
-            try {
-                const res = await fetch('/api/admin/usuarios', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nombre, email, password, rol, categoria })
-                });
-                const data = await res.json();
-                if(data.success) {
-                    alert("¡Usuario creado con éxito!");
-                    cerrarModalUsuario();
-                    cargarUsuariosAdmin();
-                } else {
-                    alert("Error: " + data.error);
-                }
-            } catch (err) {
-                console.error("Error al crear usuario:", err);
-            }
-        }
-
-        async function crearObraNueva() {
-            const nombre = prompt("Introduce el nombre de la nueva obra:");
-            if (!nombre) return;
-
+            const nombre = document.getElementById('nombreNuevaObra').value;
             try {
                 const res = await fetch('/api/admin/obras', {
                     method: 'POST',
@@ -399,14 +583,209 @@
                 });
                 const data = await res.json();
                 if(data.success) {
-                    alert("¡Obra creada con éxito!");
+                    alert('✅ ¡Obra creada con éxito!');
+                    document.getElementById('nombreNuevaObra').value = '';
                     cargarObrasAdmin();
+                }
+            } catch(err) { console.error(err); }
+        }
+
+        async function toggleEstadoObra(idObra, nuevoEstado) {
+            try {
+                await fetch(`/api/admin/obras/${idObra}/estado`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ activo: nuevoEstado })
+                });
+                cargarObrasAdmin();
+            } catch(err) { console.error(err); }
+        }
+
+        async function cargarUsuariosAdmin() {
+            try {
+                const res = await fetch('/api/admin/usuarios-todos');
+                const data = await res.json();
+                if(data.success) {
+                    todosLosUsuariosGlobal = data.usuarios;
+                    renderizarUsuarios(todosLosUsuariosGlobal);
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        function renderizarUsuarios(usuarios) {
+            const contenedor = document.getElementById('listaUsuariosAdmin');
+            contenedor.innerHTML = '';
+            
+            if (usuarios.length === 0) {
+                contenedor.innerHTML = '<div class="p-4 bg-gray-50 rounded text-sm text-gray-500 text-center">No se encontraron trabajadores con los filtros indicados.</div>';
+                return;
+            }
+
+            usuarios.forEach(u => {
+                const estadoClase = u.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+                const textoEstado = u.activo ? 'Activo' : 'Deshabilitado';
+                const botonEstadoTexto = u.activo ? 'Deshabilitar' : 'Habilitar';
+                const botonEstadoClase = u.activo ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100';
+
+                contenedor.innerHTML += `
+                    <div class="p-3 bg-white border rounded shadow-sm text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div class="flex items-center gap-3">
+                            <div>
+                                <span class="font-bold text-gray-800">${u.nombre}</span> <span class="text-xs text-gray-500">(Cód: ${u.codigo_operario || 'N/A'})</span>
+                                <div class="text-xs text-gray-500">${u.email} | <span class="uppercase font-semibold text-[#004b87]">${u.rol}</span> - <span class="text-gray-600">${u.categoria || 'General'}</span></div>
+                            </div>
+                            <span class="text-xs px-2 py-0.5 rounded font-bold ${estadoClase}">${textoEstado}</span>
+                        </div>
+                        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                            <button onclick="editarUsuario(${u.id_usuario}, '${u.nombre}', '${u.email}', '${u.rol}', '${u.categoria || ''}', '${u.codigo_operario || ''}')" class="text-xs font-bold px-3 py-1 bg-blue-50 text-[#004b87] hover:bg-blue-100 rounded transition">
+                                ✏️ Editar
+                            </button>
+                            <button onclick="restablecerPassword(${u.id_usuario}, '${u.nombre}')" class="text-xs font-bold px-3 py-1 bg-yellow-50 text-amber-700 hover:bg-yellow-100 rounded transition">
+                                🔑 Contraseña
+                            </button>
+                            <button onclick="toggleEstadoUsuario(${u.id_usuario}, ${!u.activo})" class="text-xs font-bold px-3 py-1 rounded transition ${botonEstadoClase}">
+                                ${botonEstadoTexto}
+                            </button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function filtrarUsuariosLista() {
+            const queryNombre = document.getElementById('busqNombre').value.toLowerCase();
+            const queryCodigo = document.getElementById('busqCodigo').value.toLowerCase();
+            const queryCategoria = document.getElementById('busqCategoria').value.toLowerCase();
+
+            const filtrados = todosLosUsuariosGlobal.filter(u => {
+                const nombreMatch = (u.nombre || '').toLowerCase().includes(queryNombre);
+                const codigoMatch = String(u.codigo_operario || '').toLowerCase().includes(queryCodigo);
+                const categoriaMatch = (u.categoria || '').toLowerCase().includes(queryCategoria);
+                return nombreMatch && codigoMatch && categoriaMatch;
+            });
+
+            renderizarUsuarios(filtrados);
+        }
+
+        async function crearUsuario(e) {
+            e.preventDefault();
+            const nuevoUser = {
+                codigo_operario: document.getElementById('codigoOperario').value,
+                nombre: document.getElementById('nombreUsuario').value,
+                email: document.getElementById('emailUsuario').value,
+                password: document.getElementById('passUsuario').value,
+                rol: document.getElementById('rolUsuario').value,
+                categoria: document.getElementById('categoriaUsuario').value
+            };
+            try {
+                const res = await fetch('/api/admin/usuarios', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(nuevoUser)
+                });
+                const data = await res.json();
+                if(data.success) {
+                    alert('✅ ¡Usuario registrado con éxito!');
+                    document.getElementById('formNuevoUsuario').reset();
+                    cargarUsuariosAdmin();
+                }
+            } catch(err) { console.error(err); }
+        }
+
+        async function editarUsuario(idUsuario, nombreAct, emailAct, rolAct, catAct, codAct) {
+            const nuevoNombre = prompt("Editar Nombre y Apellidos:", nombreAct);
+            if (nuevoNombre === null) return;
+            const nuevoEmail = prompt("Editar Correo Electrónico:", emailAct);
+            if (nuevoEmail === null) return;
+            const nuevoRol = prompt("Editar Rol (admin, encargado, jefe_de_obra, operario):", rolAct);
+            if (nuevoRol === null) return;
+            const nuevaCat = prompt("Editar Categoría Profesional:", catAct);
+            if (nuevaCat === null) return;
+            const nuevoCod = prompt("Editar Código de Empleado:", codAct);
+            if (nuevoCod === null) return;
+
+            try {
+                const res = await fetch(`/api/admin/usuarios/${idUsuario}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nombre: nuevoNombre,
+                        email: nuevoEmail,
+                        rol: nuevoRol,
+                        categoria: nuevaCat,
+                        codigo_operario: nuevoCod
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('✅ ¡Usuario modificado correctamente!');
+                    cargarUsuariosAdmin();
                 } else {
-                    alert("Error: " + data.error);
+                    alert('❌ Error al modificar el usuario.');
                 }
             } catch (err) {
-                console.error("Error al crear obra:", err);
+                console.error('Error de conexión:', err);
+                alert('❌ No se pudo conectar con el servidor.');
             }
+        }
+
+        async function restablecerPassword(idUsuario, nombreOperario) {
+            const nuevaPass = prompt(`Introduce la nueva contraseña temporal para ${nombreOperario}:`, "123456");
+            if (nuevaPass === null) return;
+
+            try {
+                const res = await fetch(`/api/admin/usuarios/${idUsuario}/password`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: nuevaPass })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('✅ ¡Contraseña restablecida con éxito!');
+                } else {
+                    alert('❌ Error al restablecer la contraseña.');
+                }
+            } catch (err) {
+                console.error('Error de conexión:', err);
+                alert('❌ No se pudo conectar con el servidor.');
+            }
+        }
+
+        async function toggleEstadoUsuario(idUsuario, nuevoEstado) {
+            try {
+                await fetch(`/api/admin/usuarios/${idUsuario}/estado`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ activo: nuevoEstado })
+                });
+                cargarUsuariosAdmin();
+            } catch(err) { console.error(err); }
+        }
+
+        function cambiarPeriodo() {
+            const val = document.getElementById('selectorPeriodo').value;
+            const bloque = document.getElementById('bloquePersonalizado');
+            if(val === 'personalizado') bloque.classList.remove('hidden');
+            else bloque.classList.add('hidden');
+        }
+
+        function descargarInforme() {
+            const selector = document.getElementById('selectorPeriodo').value;
+            const hoy = new Date();
+            let anio = hoy.getFullYear();
+            let mes = hoy.getMonth();
+            let inicio = '', fin = '';
+            const fmt = (y, m, d) => `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+
+            if(selector === 'q1_actual') { inicio = fmt(anio, mes, 1); fin = fmt(anio, mes, 15); }
+            else if(selector === 'q2_actual') { inicio = fmt(anio, mes, 16); fin = fmt(anio, mes, new Date(anio, mes+1, 0).getDate()); }
+            else if(selector === 'q1_anterior') { let ma = mes-1, aa = anio; if(ma<0){ma=11;aa--;} inicio = fmt(aa, ma, 1); fin = fmt(aa, ma, 15); }
+            else if(selector === 'q2_anterior') { let ma = mes-1, aa = anio; if(ma<0){ma=11;aa--;} inicio = fmt(aa, ma, 16); fin = fmt(aa, ma, new Date(aa, ma+1, 0).getDate()); }
+            else if(selector === 'personalizado') {
+                inicio = document.getElementById('fechaInicio').value;
+                fin = document.getElementById('fechaFin').value;
+                if(!inicio || !fin) { alert('Selecciona un rango de fechas válido.'); return; }
+            }
+            window.location.href = `/api/admin/exportar?inicio=${inicio}&fin=${fin}`;
         }
     </script>
 </body>
