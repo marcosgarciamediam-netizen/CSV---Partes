@@ -148,12 +148,16 @@
             const fin = document.getElementById('filtroFin').value;
             const contenedor = document.getElementById('listaPartes');
             
+            if (!idObra) {
+                alert('⚠️ Por favor, selecciona una obra obligatoriamente para consultar los partes.');
+                return;
+            }
+
             document.getElementById('panelResultados').classList.remove('hidden');
             contenedor.innerHTML = '<div class="p-4 text-center text-sm">Cargando...</div>';
 
             try {
-                let url = `/api/admin/partes-filtrados?1=1`;
-                if(idObra) url += `&id_obra=${idObra}`;
+                let url = `/api/admin/partes-filtrados?id_obra=${idObra}`;
                 if(inicio) url += `&fecha_inicio=${inicio}`;
                 if(fin) url += `&fecha_fin=${fin}`;
 
@@ -168,7 +172,7 @@
                     });
                     document.getElementById('statHoras').textContent = totalHoras.toFixed(1);
                 } else {
-                    contenedor.innerHTML = '<div class="p-4 bg-gray-50 text-center text-sm border rounded-lg">No hay partes.</div>';
+                    contenedor.innerHTML = '<div class="p-4 bg-gray-50 text-center text-sm border rounded-lg">No hay partes registrados para esta obra en el rango de fechas seleccionado.</div>';
                     document.getElementById('statHoras').textContent = '0';
                 }
             } catch (e) { console.error(e); }
