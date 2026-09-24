@@ -63,6 +63,9 @@
                 <button onclick="cambiarVista('usuarios')" id="btn-usuarios" class="w-full text-left p-3 rounded-lg opacity-80 hover:bg-yellow-300 transition flex items-center gap-2">
                     <span>👥</span> Usuarios
                 </button>
+                <button onclick="cambiarVista('asignaciones')" id="btn-asignaciones" class="w-full text-left p-3 rounded-lg opacity-80 hover:bg-yellow-300 transition flex items-center gap-2">
+                    <span>🔗</span> Asignaciones (Cuadrillas y Obras)
+                </button>
                 <button onclick="cambiarVista('quincena')" id="btn-quincena" class="w-full text-left p-3 rounded-lg opacity-80 hover:bg-yellow-300 transition flex items-center gap-2">
                     <span>📅</span> Quincena
                 </button>
@@ -246,7 +249,68 @@
                     </div>
                 </section>
 
-                <!-- 5. VISTA: QUINCENA -->
+                <!-- 5. VISTA: ASIGNACIONES -->
+                <section id="seccion-asignaciones" class="vista-panel hidden space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Asignar Operarios a Encargados -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
+                            <h2 class="text-lg font-bold text-[#004b87]">Asignar Operario a Encargado</h2>
+                            <form onsubmit="asignarOperarioEncargado(event)" class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-600 mb-1">Seleccionar Encargado</label>
+                                    <select id="selectEncargado" class="w-full border border-gray-300 p-2 rounded-lg text-sm bg-white outline-none" required>
+                                        <option value="">Cargando encargados...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-600 mb-1">Seleccionar Operario</label>
+                                    <select id="selectOperarioAsignar" class="w-full border border-gray-300 p-2 rounded-lg text-sm bg-white outline-none" required>
+                                        <option value="">Cargando operarios...</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="w-full bg-[#ffcc00] text-[#004b87] font-bold text-xs py-2.5 rounded-lg shadow hover:bg-yellow-400 transition">
+                                    🔗 Asignar Operario a Cuadrilla
+                                </button>
+                            </form>
+                            <div class="pt-4 border-t">
+                                <h3 class="text-xs font-bold text-gray-700 uppercase mb-2">Asignaciones de Plantilla Actuales</h3>
+                                <div id="tablaAsignacionesPlantilla" class="space-y-2 max-h-48 overflow-y-auto text-xs">
+                                    <span class="text-gray-400">Cargando...</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Asignar Obras a Jefes -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
+                            <h2 class="text-lg font-bold text-[#004b87]">Asignar Obra a Jefe de Obra</h2>
+                            <form onsubmit="asignarObraJefe(event)" class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-600 mb-1">Seleccionar Jefe de Obra</label>
+                                    <select id="selectJefeObra" class="w-full border border-gray-300 p-2 rounded-lg text-sm bg-white outline-none" required>
+                                        <option value="">Cargando jefes...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-600 mb-1">Seleccionar Obra</label>
+                                    <select id="selectObraAsignar" class="w-full border border-gray-300 p-2 rounded-lg text-sm bg-white outline-none" required>
+                                        <option value="">Cargando obras...</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="w-full bg-[#ffcc00] text-[#004b87] font-bold text-xs py-2.5 rounded-lg shadow hover:bg-yellow-400 transition">
+                                    🏗️ Asignar Obra a Jefe
+                                </button>
+                            </form>
+                            <div class="pt-4 border-t">
+                                <h3 class="text-xs font-bold text-gray-700 uppercase mb-2">Asignaciones de Obras Actuales</h3>
+                                <div id="tablaAsignacionesObras" class="space-y-2 max-h-48 overflow-y-auto text-xs">
+                                    <span class="text-gray-400">Cargando...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. VISTA: QUINCENA -->
                 <section id="seccion-quincena" class="vista-panel hidden space-y-6">
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 max-w-xl">
                         <h2 class="text-lg font-bold text-[#004b87] mb-2">Centro de Exportación Quincenal</h2>
@@ -282,7 +346,7 @@
                     </div>
                 </section>
 
-                <!-- 6. VISTA: DEDICACIÓN MENSUAL DE JEFES DE OBRA -->
+                <!-- 7. VISTA: DEDICACIÓN MENSUAL DE JEFES DE OBRA -->
                 <section id="seccion-dedicacion" class="vista-panel hidden space-y-6">
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                         <h2 class="text-lg font-bold text-[#004b87] mb-2">Dedicación Mensual de Jefes de Obra</h2>
@@ -304,6 +368,7 @@
             'partes': 'Gestión de Partes de Trabajo',
             'obras': 'Gestión de Obras',
             'usuarios': 'Gestión de Usuarios',
+            'asignaciones': 'Gestión de Asignaciones',
             'quincena': 'Exportación Quincenal',
             'dedicacion': 'Dedicación Mensual de Jefes de Obra'
         };
@@ -334,6 +399,7 @@
 
             if (nombreVista === 'obras') cargarObrasAdmin();
             if (nombreVista === 'usuarios') cargarUsuariosAdmin();
+            if (nombreVista === 'asignaciones') cargarDatosAsignaciones();
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -759,6 +825,148 @@
                 });
                 cargarUsuariosAdmin();
             } catch(err) { console.error(err); }
+        }
+
+        // ================= GESTIÓN DE ASIGNACIONES (PLANTILLAS Y OBRAS) =================
+        async function cargarDatosAsignaciones() {
+            try {
+                // Cargar desplegables de encargados y operarios
+                const resUsers = await fetch('/api/admin/usuarios-todos');
+                const dataUsers = await resUsers.json();
+                if (dataUsers.success) {
+                    const selEncargado = document.getElementById('selectEncargado');
+                    const selOperario = document.getElementById('selectOperarioAsignar');
+                    const selJefe = document.getElementById('selectJefeObra');
+
+                    selEncargado.innerHTML = '<option value="">-- Selecciona Encargado --</option>';
+                    selOperario.innerHTML = '<option value="">-- Selecciona Operario --</option>';
+                    selJefe.innerHTML = '<option value="">-- Selecciona Jefe de Obra --</option>';
+
+                    dataUsers.usuarios.forEach(u => {
+                        if (u.rol === 'encargado') selEncargado.innerHTML += `<option value="${u.id_usuario}">${u.nombre}</option>`;
+                        if (u.rol === 'operario') selOperario.innerHTML += `<option value="${u.id_usuario}">${u.nombre} (${u.codigo_operario || 'Sin Cód'})</option>`;
+                        if (u.rol === 'jefe_de_obra' || u.rol === 'jefedeobra') selJefe.innerHTML += `<option value="${u.id_usuario}">${u.nombre}</option>`;
+                    });
+                }
+
+                // Cargar desplegable de obras
+                const resObras = await fetch('/api/obras');
+                const dataObras = await resObras.json();
+                if (dataObras.success) {
+                    const selObra = document.getElementById('selectObraAsignar');
+                    selObra.innerHTML = '<option value="">-- Selecciona Obra --</option>';
+                    dataObras.obras.forEach(o => {
+                        selObra.innerHTML += `<option value="${o.id_obra}">${o.nombre}</option>`;
+                    });
+                }
+
+                // Cargar tablas de asignaciones existentes
+                cargarListasAsignacionesGuardadas();
+            } catch (err) {
+                console.error("Error cargando datos de asignación:", err);
+            }
+        }
+
+        async function cargarListasAsignacionesGuardadas() {
+            try {
+                // Asignaciones de plantilla
+                const resP = await fetch('/api/admin/asignaciones-plantilla');
+                const dataP = await resP.json();
+                const divP = document.getElementById('tablaAsignacionesPlantilla');
+                divP.innerHTML = '';
+                if (dataP.success && dataP.asignaciones.length > 0) {
+                    dataP.asignaciones.forEach(a => {
+                        divP.innerHTML += `
+                            <div class="flex justify-between items-center p-2 bg-gray-50 rounded border">
+                                <div><b>${a.encargado_nombre}</b> ➔ ${a.operario_nombre}</div>
+                                <button onclick="eliminarAsignacionPlantilla(${a.id_asignacion})" class="text-red-600 font-bold hover:underline">Eliminar</button>
+                            </div>`;
+                    });
+                } else {
+                    divP.innerHTML = '<span class="text-gray-400">No hay operarios asignados a encargados.</span>';
+                }
+
+                // Asignaciones de obras a jefes
+                const resO = await fetch('/api/admin/asignaciones-obras');
+                const dataO = await resO.json();
+                const divO = document.getElementById('tablaAsignacionesObras');
+                divO.innerHTML = '';
+                if (dataO.success && dataO.asignaciones.length > 0) {
+                    dataO.asignaciones.forEach(a => {
+                        divO.innerHTML += `
+                            <div class="flex justify-between items-center p-2 bg-gray-50 rounded border">
+                                <div><b>${a.jefe_nombre}</b> ➔ ${a.obra_nombre}</div>
+                                <button onclick="eliminarAsignacionObra(${a.id_asignacion})" class="text-red-600 font-bold hover:underline">Eliminar</button>
+                            </div>`;
+                    });
+                } else {
+                    divO.innerHTML = '<span class="text-gray-400">No hay obras asignadas a jefes.</span>';
+                }
+            } catch (err) {
+                console.error("Error al cargar listas guardadas:", err);
+            }
+        }
+
+        async function asignarOperarioEncargado(e) {
+            e.preventDefault();
+            const id_encargado = document.getElementById('selectEncargado').value;
+            const id_operario = document.getElementById('selectOperarioAsignar').value;
+
+            try {
+                const res = await fetch('/api/admin/asignaciones-plantilla', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id_encargado, id_operario })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('✅ ¡Operario asignado al encargado con éxito!');
+                    cargarListasAsignacionesGuardadas();
+                } else {
+                    alert('❌ Error: ' + (data.error || 'No se pudo asignar'));
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function asignarObraJefe(e) {
+            e.preventDefault();
+            const id_jefe = document.getElementById('selectJefeObra').value;
+            const id_obra = document.getElementById('selectObraAsignar').value;
+
+            try {
+                const res = await fetch('/api/admin/asignaciones-obras', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id_jefe, id_obra })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('✅ ¡Obra asignada al jefe con éxito!');
+                    cargarListasAsignacionesGuardadas();
+                } else {
+                    alert('❌ Error: ' + (data.error || 'No se pudo asignar'));
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function eliminarAsignacionPlantilla(idAsignacion) {
+            if (!confirm("¿Seguro que deseas eliminar esta asignación?")) return;
+            try {
+                await fetch(`/api/admin/asignaciones-plantilla/${idAsignacion}`, { method: 'DELETE' });
+                cargarListasAsignacionesGuardadas();
+            } catch (err) { console.error(err); }
+        }
+
+        async function eliminarAsignacionObra(idAsignacion) {
+            if (!confirm("¿Seguro que deseas eliminar esta asignación?")) return;
+            try {
+                await fetch(`/api/admin/asignaciones-obras/${idAsignacion}`, { method: 'DELETE' });
+                cargarListasAsignacionesGuardadas();
+            } catch (err) { console.error(err); }
         }
 
         function cambiarPeriodo() {
