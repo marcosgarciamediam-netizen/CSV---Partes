@@ -504,9 +504,11 @@
                     let totalGlobal = 0;
                     data.partes.forEach(p => {
                         totalGlobal += parseFloat(p.horas || 0);
+                        // Limpiamos la fecha para asegurarnos de que se pasa correctamente
+                        let fechaLimpia = p.fecha ? p.fecha.split('T')[0] : new Date().toISOString().split('T')[0];
                         contenedor.innerHTML += `
                             <div class="border-b pb-6 space-y-3 relative">
-                                <button onclick="abrirModalEditarParte(${p.id_parte}, ${p.horas}, '${p.tareas.replace(/'/g, "\\'")}', ${p.id_obra}, '${p.obra_nombre.replace(/'/g, "\\'")}')" class="absolute top-0 right-0 bg-yellow-50 hover:bg-yellow-100 text-[#004b87] px-3 py-1 rounded text-xs font-bold transition">✏️ Editar</button>
+                                <button onclick="abrirModalEditarParte(${p.id_parte}, ${p.horas}, '${p.tareas.replace(/'/g, "\\'")}', ${p.id_obra}, '${p.obra_nombre.replace(/'/g, "\\'")}', '${fechaLimpia}')" class="absolute top-0 right-0 bg-yellow-50 hover:bg-yellow-100 text-[#004b87] px-3 py-1 rounded text-xs font-bold transition">✏️ Editar</button>
                                 <div class="text-sm font-bold flex justify-between pr-20"><span>${p.operario_nombre}</span></div>
                                 <div class="text-xs font-semibold text-[#004b87] bg-yellow-50 p-2 rounded">[${p.codigo_operario || '000'}] ${p.obra_nombre}</div>
                                 <div class="bg-gray-50 p-3 rounded text-xs space-y-1">
@@ -520,12 +522,13 @@
             } catch (e) { console.error(e); }
         }
 
-        function abrirModalEditarParte(idParte, horas, tareas, idObraActual, nombreObraActual) {
+        function abrirModalEditarParte(idParte, horas, tareas, idObraActual, nombreObraActual, fechaActual) {
             document.getElementById('modalIdParte').value = idParte;
             document.getElementById('modalHoras').value = horas;
             document.getElementById('modalTareas').value = tareas;
             document.getElementById('buscadorObraInput').value = nombreObraActual;
             document.getElementById('modalIdObraSeleccionada').value = idObraActual;
+            window.fechaParteActual = fechaActual;
             
             filtrarObrasModal('');
             document.getElementById('modalEditarParte').classList.remove('hidden');
@@ -581,7 +584,8 @@
             const payload = { 
                 horas: horas, 
                 tareas: tareas, 
-                id_obra: parseInt(id_obra) 
+                id_obra: parseInt(id_obra),
+                fecha: window.fechaParteActual || new Date().toISOString().split('T')[0]
             };
 
             try {
