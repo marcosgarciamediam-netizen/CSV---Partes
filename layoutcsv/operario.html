@@ -3,107 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Partes - CSV Construcción</title>
+    <title>CSV Operario - Registro de Partes</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 font-sans min-h-screen flex items-center justify-center p-4">
+<body class="bg-gray-100 font-sans">
+    <script>
+        (function() {
+            const usuarioId = localStorage.getItem('usuario_id');
+            const usuarioRol = localStorage.getItem('usuario_rol');
+            if (!usuarioId || usuarioRol !== 'operario') {
+                alert('⚠️ Acceso no autorizado para este rol.');
+                window.location.href = 'index.html';
+            }
+        })();
+    </script>
 
-    <div class="bg-white p-8 rounded-2xl shadow-xl border-t-4 border-[#004b87] w-full max-w-lg space-y-6">
-        
-        <!-- Cabecera -->
-        <div class="flex justify-between items-center border-b pb-4">
-            <div>
-                <h1 class="text-xl font-extrabold text-[#004b87]">Nuevo Parte de Trabajo</h1>
-                <p id="nombreOperario" class="text-xs text-gray-500 font-medium"></p>
-            </div>
-            <button onclick="cerrarSesion()" class="bg-red-50 text-red-700 border border-red-200 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-red-100 transition">
-                Salir
-            </button>
+    <div class="flex h-screen overflow-hidden">
+        <div class="flex-1 flex flex-col overflow-hidden w-full">
+            <header class="bg-white p-4 md:p-6 shadow-sm flex justify-between items-center z-10 border-b border-gray-200">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-[#ffcc00] rounded-xl flex items-center justify-center font-black text-[#004b87] border-2 border-[#004b87]">CSV</div>
+                    <h1 class="text-lg md:text-2xl font-bold text-[#004b87]">Portal del Operario</h1>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span id="nombreUsuarioHeader" class="text-sm font-bold text-[#004b87]">Operario</span>
+                    <button onclick="cerrarSesion()" class="bg-red-50 text-red-600 hover:bg-red-100 font-bold text-xs px-3 py-2 rounded-lg transition">🚪 Salir</button>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50 space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 max-w-xl mx-auto">
+                    <h2 class="text-lg font-bold text-[#004b87] mb-2">Enviar Parte Diario de Trabajo</h2>
+                    <p class="text-xs text-gray-600 mb-6">Introduce las horas y tareas realizadas en la obra asignada de hoy.</p>
+                    
+                    <form id="formParte" onsubmit="enviarParte(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Obra Asignada</label>
+                            <select id="obraSelect" required class="w-full border border-gray-300 p-3 rounded-xl text-sm bg-gray-50 focus:border-[#004b87] outline-none">
+                                <option value="">Cargando obras...</option>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Fecha</label>
+                                <input type="date" id="fechaInput" required class="w-full border border-gray-300 p-3 rounded-xl text-sm bg-gray-50 focus:border-[#004b87] outline-none" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Horas Trabajadas</label>
+                                <input type="number" id="horasInput" step="0.5" min="0.5" max="24" value="8" required class="w-full border border-gray-300 p-3 rounded-xl text-sm bg-gray-50 focus:border-[#004b87] outline-none" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Detalle / Tareas Realizadas</label>
+                            <textarea id="tareasInput" rows="3" required placeholder="Describe brevemente el trabajo realizado..." class="w-full border border-gray-300 p-3 rounded-xl text-sm bg-gray-50 focus:border-[#004b87] outline-none"></textarea>
+                        </div>
+                        
+                        <div id="mensajeFeedback" class="hidden p-3 text-xs font-semibold rounded text-center"></div>
+
+                        <button type="submit" id="btnSubmit" class="w-full bg-[#ffcc00] text-[#004b87] font-extrabold text-sm py-3.5 rounded-xl shadow-md hover:bg-yellow-400 transition transform active:scale-[0.99]">
+                            🚀 Enviar Parte Diario
+                        </button>
+                    </form>
+                </div>
+            </main>
         </div>
-
-        <!-- Formulario de Parte -->
-        <form id="formParte" onsubmit="enviarParte(event)" class="space-y-4">
-            <div>
-                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Obra</label>
-                <select id="id_obra" class="w-full border border-gray-300 p-3 rounded-xl text-sm outline-none focus:border-[#004b87] bg-gray-50" required>
-                    <option value="">Selecciona una obra...</option>
-                </select>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Fecha</label>
-                    <input type="date" id="fecha" class="w-full border border-gray-300 p-3 rounded-xl text-sm outline-none focus:border-[#004b87] bg-gray-50" required />
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Horas</label>
-                    <input type="number" step="0.5" min="0.5" max="24" id="horas" placeholder="8" class="w-full border border-gray-300 p-3 rounded-xl text-sm outline-none focus:border-[#004b87] bg-gray-50" required />
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Tareas Realizadas</label>
-                <textarea id="tareas" rows="3" placeholder="Describe brevemente los trabajos realizados..." class="w-full border border-gray-300 p-3 rounded-xl text-sm outline-none focus:border-[#004b87] bg-gray-50 resize-none" required></textarea>
-            </div>
-
-            <div id="mensajeAlerta" class="hidden p-3 rounded-xl text-xs font-semibold"></div>
-
-            <button type="submit" class="w-full bg-[#ffcc00] text-[#004b87] font-extrabold text-sm py-3.5 rounded-xl shadow-md hover:bg-yellow-400 transition transform active:scale-[0.99]">
-                Registrar Parte
-            </button>
-        </form>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const idUsuario = localStorage.getItem('usuario_id');
-            const nombre = localStorage.getItem('usuario_nombre') || 'Operario';
-            document.getElementById('nombreOperario').textContent = `Operario: ${nombre}`;
-
-            if (!idUsuario) {
-                alert('Sesión no iniciada correctamente.');
-                window.location.href = 'index.html';
-                return;
-            }
-
-            // Poner fecha de hoy por defecto
-            document.getElementById('fecha').valueAsDate = new Date();
-
-            cargarObrasSelect();
-        });
-
-        function cerrarSesion() {
-            localStorage.clear();
-            window.location.href = 'index.html';
-        }
-
-        async function cargarObrasSelect() {
+        document.addEventListener('DOMContentLoaded', async () => {
+            const nombreUser = localStorage.getItem('usuario_nombre');
+            if (nombreUser) document.getElementById('nombreUsuarioHeader').textContent = nombreUser;
+            
+            document.getElementById('fechaInput').value = new Date().toISOString().split('T')[0];
+            
             try {
                 const res = await fetch('/api/obras');
                 const data = await res.json();
-                const select = document.getElementById('id_obra');
-
-                if (data.success && data.obras.length > 0) {
+                const select = document.getElementById('obraSelect');
+                select.innerHTML = '<option value="">-- Selecciona una obra --</option>';
+                
+                if (data.success) {
                     data.obras.forEach(o => {
                         select.innerHTML += `<option value="${o.id_obra}">${o.nombre}</option>`;
                     });
                 }
-            } catch (err) {
-                console.error("Error al cargar obras:", err);
+            } catch (error) {
+                console.error("Error cargando obras:", error);
+                document.getElementById('obraSelect').innerHTML = '<option value="">Error al cargar obras</option>';
             }
-        }
+        });
 
         async function enviarParte(e) {
             e.preventDefault();
-
+            const btn = document.getElementById('btnSubmit');
+            const feedback = document.getElementById('mensajeFeedback');
+            
             const id_usuario = localStorage.getItem('usuario_id');
-            const id_obra = document.getElementById('id_obra').value;
-            const fecha = document.getElementById('fecha').value;
-            const horas = document.getElementById('horas').value;
-            const tareas = document.getElementById('tareas').value;
-            const divAlerta = document.getElementById('mensajeAlerta');
+            const id_obra = document.getElementById('obraSelect').value;
+            const fecha = document.getElementById('fechaInput').value;
+            const horas = document.getElementById('horasInput').value;
+            const tareas = document.getElementById('tareasInput').value;
 
-            divAlerta.classList.add('hidden');
+            btn.disabled = true;
+            btn.textContent = 'Enviando...';
+            feedback.classList.add('hidden');
 
             try {
                 const res = await fetch('/api/partes', {
@@ -111,28 +116,28 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id_usuario, id_obra, fecha, horas, tareas })
                 });
-
                 const data = await res.json();
 
                 if (data.success) {
-                    divAlerta.className = "p-3 bg-green-50 border-l-4 border-green-600 text-green-700 text-xs font-semibold rounded";
-                    divAlerta.textContent = "✅ ¡Parte registrado correctamente!";
-                    divAlerta.classList.remove('hidden');
-                    
-                    // Limpiar campos de texto y horas
-                    document.getElementById('tareas').value = '';
-                    document.getElementById('horas').value = '';
+                    feedback.textContent = '✅ ¡Parte enviado correctamente!';
+                    feedback.className = 'p-3 text-xs font-semibold rounded text-center bg-green-50 text-green-700 block mt-4';
+                    document.getElementById('tareasInput').value = ''; 
                 } else {
-                    divAlerta.className = "p-3 bg-red-50 border-l-4 border-red-600 text-red-700 text-xs font-semibold rounded";
-                    divAlerta.textContent = "❌ Error: " + (data.error || 'No se pudo guardar el parte.');
-                    divAlerta.classList.remove('hidden');
+                    feedback.textContent = '❌ Error: ' + (data.error || 'No se pudo guardar el parte');
+                    feedback.className = 'p-3 text-xs font-semibold rounded text-center bg-red-50 text-red-700 block mt-4';
                 }
-            } catch (err) {
-                console.error("Error al enviar parte:", err);
-                divAlerta.className = "p-3 bg-red-50 border-l-4 border-red-600 text-red-700 text-xs font-semibold rounded";
-                divAlerta.textContent = "❌ Error de conexión con el servidor.";
-                divAlerta.classList.remove('hidden');
+            } catch (error) {
+                feedback.textContent = '❌ Error de conexión con el servidor.';
+                feedback.className = 'p-3 text-xs font-semibold rounded text-center bg-red-50 text-red-700 block mt-4';
             }
+            
+            btn.disabled = false;
+            btn.textContent = '🚀 Enviar Parte Diario';
+        }
+        
+        function cerrarSesion() { 
+            localStorage.clear(); 
+            window.location.href = 'index.html'; 
         }
     </script>
 </body>

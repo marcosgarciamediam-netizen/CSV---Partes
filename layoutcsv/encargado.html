@@ -3,112 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Encargado - CSV Construcción</title>
+    <title>CSV Encargado - Panel de Control</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 font-sans min-h-screen">
+<body class="bg-gray-100 font-sans">
+    <script>
+        (function() {
+            const usuarioId = localStorage.getItem('usuario_id');
+            const usuarioRol = (localStorage.getItem('usuario_rol') || '').toLowerCase().trim();
+            
+            if (!usuarioId || usuarioRol !== 'encargado') {
+                localStorage.clear();
+                alert('⚠️ Acceso no autorizado. Debes iniciar sesión como encargado.');
+                window.location.replace('index.html');
+            }
+        })();
+    </script>
 
-    <div class="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
-        <!-- Cabecera -->
-        <header class="bg-white p-4 sm:p-6 rounded-2xl shadow-md border-t-4 border-[#004b87] flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div>
-                <h1 class="text-2xl font-black text-[#004b87]">Panel de Encargado</h1>
-                <p class="text-xs text-gray-500">Gestión de cuadrilla y partes de trabajo del equipo</p>
-            </div>
-            <div class="flex items-center gap-3">
-                <span id="nombreEncargado" class="text-sm font-bold text-gray-700"></span>
-                <button onclick="cerrarSesion()" class="bg-red-50 text-red-700 border border-red-200 px-4 py-2 rounded-xl text-xs font-bold hover:bg-red-100 transition">
-                    Cerrar Sesión
-                </button>
-            </div>
-        </header>
-
-        <!-- Contenido Principal -->
-        <main class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Plantilla Asignada -->
-            <section class="bg-white p-6 rounded-2xl shadow-md space-y-4">
-                <h2 class="text-lg font-extrabold text-[#004b87]">Mi Cuadrilla / Operarios</h2>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead>
-                            <tr class="bg-gray-50 text-gray-600 uppercase text-[10px] tracking-wider border-b">
-                                <th class="p-3">Código</th>
-                                <th class="p-3">Nombre</th>
-                                <th class="p-3">Categoría</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaPlantillaBody" class="divide-y divide-gray-100 text-xs">
-                            <!-- Cargado dinámicamente -->
-                        </tbody>
-                    </table>
+    <div class="flex h-screen overflow-hidden">
+        <div class="flex-1 flex flex-col overflow-hidden w-full">
+            <header class="bg-white p-4 md:p-6 shadow-sm flex justify-between items-center z-10 border-b border-gray-200">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-[#ffcc00] rounded-xl flex items-center justify-center font-black text-[#004b87] border-2 border-[#004b87]">CSV</div>
+                    <h1 class="text-lg md:text-2xl font-bold text-[#004b87]">Panel de Encargado</h1>
                 </div>
-            </section>
-
-            <!-- Partes Recientes de la Cuadrilla -->
-            <section class="bg-white p-6 rounded-2xl shadow-md space-y-4">
-                <h2 class="text-lg font-extrabold text-[#004b87]">Partes Recientes del Equipo</h2>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead>
-                            <tr class="bg-gray-50 text-gray-600 uppercase text-[10px] tracking-wider border-b">
-                                <th class="p-3">Fecha</th>
-                                <th class="p-3">Operario</th>
-                                <th class="p-3">Obra</th>
-                                <th class="p-3">Horas</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaPartesCuadrillaBody" class="divide-y divide-gray-100 text-xs">
-                            <!-- Cargado dinámicamente -->
-                        </tbody>
-                    </table>
+                <div class="flex items-center gap-3">
+                    <span id="nombreUsuarioHeader" class="text-sm font-bold text-[#004b87]">Encargado</span>
+                    <button onclick="cerrarSesion()" class="bg-red-50 text-red-600 hover:bg-red-100 font-bold text-xs px-3 py-2 rounded-lg transition">🚪 Salir</button>
                 </div>
-            </section>
-        </main>
+            </header>
+
+            <main class="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50 space-y-6">
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Columna Izquierda: Registrar parte para un operario de la plantilla -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 lg:col-span-1 space-y-4">
+                        <h2 class="text-lg font-bold text-[#004b87]">Registrar Parte de Cuadrilla</h2>
+                        <p class="text-xs text-gray-600">Selecciona un trabajador de tu plantilla para imputarle horas.</p>
+                        
+                        <form id="formParteEncargado" onsubmit="enviarParteEncargado(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Trabajador</label>
+                                <select id="selectOperario" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50">
+                                    <option value="">Cargando plantilla...</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Obra</label>
+                                <select id="selectObra" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50">
+                                    <option value="">Cargando obras...</option>
+                                </select>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Fecha</label>
+                                    <input type="date" id="inputFecha" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Horas</label>
+                                    <input type="number" id="inputHoras" step="0.5" min="0.5" max="24" value="8" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Tareas / Detalles</label>
+                                <textarea id="inputTareas" rows="2" required placeholder="Descripción de las labores..." class="w-full border p-2.5 rounded-xl text-sm bg-gray-50"></textarea>
+                            </div>
+
+                            <div id="mensajeFeedback" class="hidden p-2 text-xs font-semibold rounded text-center"></div>
+
+                            <button type="submit" id="btnEnviar" class="w-full bg-[#ffcc00] text-[#004b87] font-extrabold text-sm py-3 rounded-xl shadow-md hover:bg-yellow-400 transition">
+                                🚀 Registrar Parte
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Columna Derecha: Historial y supervisión de partes recientes de la cuadrilla -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 lg:col-span-2 flex flex-col">
+                        <h2 class="text-lg font-bold text-[#004b87] mb-2">Últimos Partes de la Cuadrilla</h2>
+                        <p class="text-xs text-gray-600 mb-4">Supervisión en tiempo real de la actividad registrada por tus operarios.</p>
+                        
+                        <div id="listaPartesCuadrilla" class="space-y-3 overflow-y-auto flex-1 max-h-[500px] pr-1">
+                            <div class="p-4 text-center text-sm text-gray-400">Cargando partes...</div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </main>
+        </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            const nombreUser = localStorage.getItem('usuario_nombre');
             const idEncargado = localStorage.getItem('usuario_id');
-            const nombre = localStorage.getItem('usuario_nombre') || 'Encargado';
-            document.getElementById('nombreEncargado').textContent = `Hola, ${nombre}`;
+            if (nombreUser) document.getElementById('nombreUsuarioHeader').textContent = nombreUser;
+            
+            document.getElementById('inputFecha').value = new Date().toISOString().split('T')[0];
 
-            if (!idEncargado) {
-                alert('Sesión no iniciada correctamente.');
-                window.location.href = 'index.html';
-                return;
-            }
-
-            cargarPlantilla(idEncargado);
-            cargarPartesCuadrilla(idEncargado);
+            await cargarPlantillaYObra(idEncargado);
+            await cargarPartesCuadrilla(idEncargado);
         });
 
-        function cerrarSesion() {
-            localStorage.clear();
-            window.location.href = 'index.html';
-        }
-
-        async function cargarPlantilla(idEncargado) {
+        async function cargarPlantillaYObra(idEncargado) {
             try {
-                const res = await fetch(`/api/encargado/${idEncargado}/plantilla`);
-                const data = await res.json();
-                const tbody = document.getElementById('tablaPlantillaBody');
-                tbody.innerHTML = '';
-
-                if (data.success && data.plantilla.length > 0) {
-                    data.plantilla.forEach(op => {
-                        tbody.innerHTML += `
-                            <tr class="hover:bg-gray-50 border-b border-gray-50">
-                                <td class="p-3 font-mono text-gray-500">${op.codigo_operario || '-'}</td>
-                                <td class="p-3 font-bold text-[#004b87]">${op.nombre}</td>
-                                <td class="p-3 text-gray-600">${op.categoria || '-'}</td>
-                            </tr>
-                        `;
+                const resPlantilla = await fetch(`/api/encargado/${idEncargado}/plantilla`);
+                const dataPlantilla = await resPlantilla.json();
+                const selectOp = document.getElementById('selectOperario');
+                selectOp.innerHTML = '<option value="">-- Selecciona operario --</option>';
+                
+                if (dataPlantilla.success && dataPlantilla.plantilla.length > 0) {
+                    dataPlantilla.plantilla.forEach(op => {
+                        selectOp.innerHTML += `<option value="${op.id_usuario}">${op.nombre} (${op.categoria || 'General'})</option>`;
                     });
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-gray-400">No tienes operarios asignados.</td></tr>`;
+                    selectOp.innerHTML = '<option value="">No tienes operarios asignados</option>';
                 }
-            } catch (err) {
-                console.error("Error al cargar plantilla:", err);
+
+                const resObras = await fetch('/api/obras');
+                const dataObras = await resObras.json();
+                const selectObra = document.getElementById('selectObra');
+                selectObra.innerHTML = '<option value="">-- Selecciona obra --</option>';
+                
+                if (dataObras.success) {
+                    dataObras.obras.forEach(o => {
+                        selectObra.innerHTML += `<option value="${o.id_obra}">${o.nombre}</option>`;
+                    });
+                }
+            } catch (error) {
+                console.error("Error al cargar datos del encargado:", error);
             }
         }
 
@@ -116,26 +143,83 @@
             try {
                 const res = await fetch(`/api/encargado/${idEncargado}/partes`);
                 const data = await res.json();
-                const tbody = document.getElementById('tablaPartesCuadrillaBody');
-                tbody.innerHTML = '';
+                const contenedor = document.getElementById('listaPartesCuadrilla');
+                contenedor.innerHTML = '';
 
-                if (data.success && data.partes.length > 0) {
+                if (data.success) {
+                    if (data.partes.length === 0) {
+                        contenedor.innerHTML = '<div class="p-6 bg-gray-50 text-center text-sm text-gray-500 border rounded-lg">No hay partes registrados recientes en tu cuadrilla.</div>';
+                        return;
+                    }
+
                     data.partes.forEach(p => {
-                        tbody.innerHTML += `
-                            <tr class="hover:bg-gray-50 border-b border-gray-50">
-                                <td class="p-3">${p.fecha ? p.fecha.split('T')[0] : '-'}</td>
-                                <td class="p-3 font-bold text-[#004b87]">${p.operario_nombre}</td>
-                                <td class="p-3">${p.obra_nombre}</td>
-                                <td class="p-3 font-semibold">${p.horas}h</td>
-                            </tr>
+                        const fechaFormateada = new Date(p.fecha).toLocaleDateString('es-ES');
+                        contenedor.innerHTML += `
+                            <div class="border border-gray-200 rounded-lg p-4 bg-white hover:shadow-sm transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                <div>
+                                    <div class="font-bold text-gray-800 text-sm">${p.operario_nombre}</div>
+                                    <div class="text-xs font-semibold text-[#004b87]">🏗️ ${p.obra_nombre} <span class="text-gray-400 font-normal">| 📅 ${fechaFormateada}</span></div>
+                                    <div class="text-xs text-gray-600 mt-1 bg-gray-50 p-2 rounded">${p.tareas}</div>
+                                </div>
+                                <div class="bg-blue-50 text-[#004b87] px-3 py-1.5 rounded-lg font-black text-sm shrink-0">
+                                    ${p.horas}h
+                                </div>
+                            </div>
                         `;
                     });
-                } else {
-                    tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-400">No hay partes recientes registrados.</td></tr>`;
                 }
-            } catch (err) {
-                console.error("Error al cargar partes de cuadrilla:", err);
+            } catch (error) {
+                console.error("Error cargando partes:", error);
             }
+        }
+
+        async function enviarParteEncargado(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnEnviar');
+            const feedback = document.getElementById('mensajeFeedback');
+            const idEncargado = localStorage.getItem('usuario_id');
+
+            const payload = {
+                id_usuario: document.getElementById('selectOperario').value,
+                id_obra: document.getElementById('selectObra').value,
+                fecha: document.getElementById('inputFecha').value,
+                horas: document.getElementById('inputHoras').value,
+                tareas: document.getElementById('inputTareas').value
+            };
+
+            btn.disabled = true;
+            btn.textContent = 'Enviando...';
+            feedback.classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/partes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    feedback.textContent = '✅ Parte registrado con éxito';
+                    feedback.className = 'p-2 text-xs font-semibold rounded text-center bg-green-50 text-green-700 block mb-2';
+                    document.getElementById('inputTareas').value = '';
+                    await cargarPartesCuadrilla(idEncargado); 
+                } else {
+                    feedback.textContent = '❌ Error: ' + (data.error || 'No se pudo guardar');
+                    feedback.className = 'p-2 text-xs font-semibold rounded text-center bg-red-50 text-red-700 block mb-2';
+                }
+            } catch (error) {
+                feedback.textContent = '❌ Error de conexión con el servidor.';
+                feedback.className = 'p-2 text-xs font-semibold rounded text-center bg-red-50 text-red-700 block mb-2';
+            }
+
+            btn.disabled = false;
+            btn.textContent = '🚀 Registrar Parte';
+        }
+
+        function cerrarSesion() { 
+            localStorage.clear(); 
+            window.location.replace('index.html'); 
         }
     </script>
 </body>
