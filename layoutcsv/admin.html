@@ -251,7 +251,7 @@
 
         async function cargarAlertas() {
             try {
-                const res = await fetch('http://localhost:3000/api/admin/alertas');
+                const res = await fetch('/api/admin/alertas');
                 const data = await res.json();
                 const contenedor = document.getElementById('listaAlertas');
                 contenedor.innerHTML = '';
@@ -283,7 +283,7 @@
 
         async function enviarEstadoEspecial(idUsuario, fecha, tipo, horas, tareas) {
             try {
-                const res = await fetch('http://localhost:3000/api/admin/estado-especial', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_usuario: idUsuario, fecha, tipo, horas, tareas, id_obra: 1 }) });
+                const res = await fetch('/api/admin/estado-especial', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_usuario: idUsuario, fecha, tipo, horas, tareas, id_obra: 1 }) });
                 const data = await res.json();
                 if (data.success) { alert('✅ ¡Registrado!'); await cargarAlertas(); await buscarPartesFiltrados(); }
             } catch(e) { console.error(e); }
@@ -291,9 +291,9 @@
 
         async function cargarFiltrosPartes() {
             try {
-                const resOps = await fetch('http://localhost:3000/api/admin/operarios'); const dataOps = await resOps.json();
+                const resOps = await fetch('/api/admin/operarios'); const dataOps = await resOps.json();
                 if(dataOps.success) dataOps.operarios.forEach(o => document.getElementById('filtroOperario').innerHTML += `<option value="${o.id_usuario}">${o.nombre}</option>`);
-                const resObras = await fetch('http://localhost:3000/api/obras'); const dataObras = await resObras.json();
+                const resObras = await fetch('/api/obras'); const dataObras = await resObras.json();
                 if(dataObras.success) dataObras.obras.forEach(o => document.getElementById('filtroObra').innerHTML += `<option value="${o.id_obra}">${o.nombre}</option>`);
             } catch(e) { console.error(e); }
         }
@@ -302,7 +302,7 @@
             const op = document.getElementById('filtroOperario').value; const obra = document.getElementById('filtroObra').value;
             const fechaInicio = document.getElementById('filtroFechaInicio').value; const fechaFin = document.getElementById('filtroFechaFin').value;
             try {
-                const res = await fetch(`http://localhost:3000/api/admin/partes-filtrados?id_usuario=${op}&id_obra=${obra}&fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`);
+                const res = await fetch(`/api/admin/partes-filtrados?id_usuario=${op}&id_obra=${obra}&fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`);
                 const data = await res.json(); const contenedor = document.getElementById('contenedorPlantillaPartes'); contenedor.innerHTML = '';
                 if (data.success) {
                     if (data.partes.length === 0) { contenedor.innerHTML = `<div class="p-4 text-center text-gray-500 text-sm">No se encontraron partes.</div>`; document.getElementById('infoPeriodo').textContent = `Período: Sin registros`; return; }
@@ -321,7 +321,7 @@
 
         async function cargarObrasAdmin() {
             try {
-                const res = await fetch('http://localhost:3000/api/admin/obras-todas'); const data = await res.json();
+                const res = await fetch('/api/admin/obras-todas'); const data = await res.json();
                 const contenedor = document.getElementById('listaObrasAdmin'); contenedor.innerHTML = '';
                 if(data.success) data.obras.forEach(o => {
                     contenedor.innerHTML += `<div class="p-3 bg-white border rounded flex justify-between items-center text-sm"><span class="font-bold text-[#004b87]">🏗️ ${o.nombre}</span><button onclick="toggleEstadoObra(${o.id_obra}, ${!o.activo})" class="text-xs font-bold px-3 py-1 rounded ${o.activo ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}">${o.activo ? 'Deshabilitar' : 'Habilitar'}</button></div>`;
@@ -331,15 +331,15 @@
 
         async function crearObra(e) {
             e.preventDefault(); const nombre = document.getElementById('nombreNuevaObra').value;
-            const res = await fetch('http://localhost:3000/api/admin/obras', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre }) });
+            const res = await fetch('/api/admin/obras', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre }) });
             if((await res.json()).success) { document.getElementById('nombreNuevaObra').value = ''; cargarObrasAdmin(); }
         }
 
-        async function toggleEstadoObra(idObra, nuevoEstado) { await fetch(`http://localhost:3000/api/admin/obras/${idObra}/estado`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo: nuevoEstado }) }); cargarObrasAdmin(); }
+        async function toggleEstadoObra(idObra, nuevoEstado) { await fetch(`/api/admin/obras/${idObra}/estado`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo: nuevoEstado }) }); cargarObrasAdmin(); }
 
         async function cargarUsuariosAdmin() {
             try {
-                const res = await fetch('http://localhost:3000/api/admin/usuarios-todos'); const data = await res.json();
+                const res = await fetch('/api/admin/usuarios-todos'); const data = await res.json();
                 if(data.success) { todosLosUsuariosGlobal = data.usuarios; renderizarUsuarios(todosLosUsuariosGlobal); }
             } catch(e) { console.error(e); }
         }
@@ -362,28 +362,28 @@
         async function crearUsuario(e) {
             e.preventDefault();
             const nuevoUser = { codigo_operario: document.getElementById('codigoOperario').value, nombre: document.getElementById('nombreUsuario').value, email: document.getElementById('emailUsuario').value, password: document.getElementById('passUsuario').value, rol: document.getElementById('rolUsuario').value, categoria: document.getElementById('categoriaUsuario').value };
-            const res = await fetch('http://localhost:3000/api/admin/usuarios', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(nuevoUser) });
+            const res = await fetch('/api/admin/usuarios', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(nuevoUser) });
             if((await res.json()).success) { alert('✅ Registrado'); document.getElementById('formNuevoUsuario').reset(); cargarUsuariosAdmin(); }
         }
 
         async function editarUsuario(id, n, e, r, cat, cod) {
             const nn = prompt("Nombre:", n); if(nn===null)return; const ne = prompt("Email:", e); if(ne===null)return; const nr = prompt("Rol:", r); if(nr===null)return; const ncat = prompt("Categoría:", cat); if(ncat===null)return; const ncod = prompt("Código:", cod); if(ncod===null)return;
-            const res = await fetch(`http://localhost:3000/api/admin/usuarios/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre: nn, email: ne, rol: nr, categoria: ncat, codigo_operario: ncod }) });
+            const res = await fetch(`/api/admin/usuarios/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre: nn, email: ne, rol: nr, categoria: ncat, codigo_operario: ncod }) });
             if((await res.json()).success) { alert('✅ Modificado'); cargarUsuariosAdmin(); }
         }
 
         async function restablecerPassword(id, nombre) {
             const p = prompt(`Nueva contraseña para ${nombre}:`, "123456"); if(p===null)return;
-            const res = await fetch(`http://localhost:3000/api/admin/usuarios/${id}/password`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: p }) });
+            const res = await fetch(`/api/admin/usuarios/${id}/password`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: p }) });
             if((await res.json()).success) alert('✅ Contraseña restablecida');
         }
 
-        async function toggleEstadoUsuario(id, est) { await fetch(`http://localhost:3000/api/admin/usuarios/${id}/estado`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo: est }) }); cargarUsuariosAdmin(); }
+        async function toggleEstadoUsuario(id, est) { await fetch(`/api/admin/usuarios/${id}/estado`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo: est }) }); cargarUsuariosAdmin(); }
 
         // ASIGNACIÓN MASIVA DE PLANTILLA (CHECKBOXES)
         async function cargarDatosAsignacionPlantilla() {
             try {
-                const resUsers = await fetch('http://localhost:3000/api/admin/usuarios-todos');
+                const resUsers = await fetch('/api/admin/usuarios-todos');
                 const dataUsers = await resUsers.json();
                 
                 if(dataUsers.success) {
@@ -411,7 +411,7 @@
                     }
                 }
 
-                const resAsig = await fetch('http://localhost:3000/api/admin/asignaciones-plantilla');
+                const resAsig = await fetch('/api/admin/asignaciones-plantilla');
                 const dataAsig = await resAsig.json();
                 const contenedorAsig = document.getElementById('listaAsignacionesPlantilla');
                 contenedorAsig.innerHTML = '';
@@ -445,7 +445,7 @@
             const ids_operarios = Array.from(checkboxes).map(cb => cb.value);
 
             try {
-                const res = await fetch('http://localhost:3000/api/admin/asignaciones-plantilla-multiples', {
+                const res = await fetch('/api/admin/asignaciones-plantilla-multiples', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id_encargado, ids_operarios })
                 });
@@ -463,16 +463,16 @@
         }
 
         async function eliminarAsignacionPlantilla(id) {
-            await fetch(`http://localhost:3000/api/admin/asignaciones-plantilla/${id}`, { method: 'DELETE' });
+            await fetch(`/api/admin/asignaciones-plantilla/${id}`, { method: 'DELETE' });
             cargarDatosAsignacionPlantilla();
         }
 
         // ASIGNACIÓN DE OBRAS A JEFES
         async function cargarDatosAsignacionObras() {
             try {
-                const resUsers = await fetch('http://localhost:3000/api/admin/usuarios-todos');
+                const resUsers = await fetch('/api/admin/usuarios-todos');
                 const dataUsers = await resUsers.json();
-                const resObras = await fetch('http://localhost:3000/api/obras');
+                const resObras = await fetch('/api/obras');
                 const dataObras = await resObras.json();
                 if(dataUsers.success) {
                     const jefes = dataUsers.usuarios.filter(u => u.rol.toLowerCase().includes('jefe'));
@@ -485,7 +485,7 @@
                     dataObras.obras.forEach(o => htmlObras += `<option value="${o.id_obra}">${o.nombre}</option>`);
                     document.getElementById('selectObraAsignar').innerHTML = htmlObras;
                 }
-                const resAsig = await fetch('http://localhost:3000/api/admin/asignaciones-obras');
+                const resAsig = await fetch('/api/admin/asignaciones-obras');
                 const dataAsig = await resAsig.json();
                 const contenedor = document.getElementById('listaAsignacionesObras');
                 contenedor.innerHTML = '';
@@ -501,12 +501,12 @@
             e.preventDefault();
             const id_jefe = document.getElementById('selectJefeAsignar').value;
             const id_obra = document.getElementById('selectObraAsignar').value;
-            const res = await fetch('http://localhost:3000/api/admin/asignaciones-obras', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_jefe, id_obra }) });
+            const res = await fetch('/api/admin/asignaciones-obras', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_jefe, id_obra }) });
             if((await res.json()).success) cargarDatosAsignacionObras();
         }
 
         async function eliminarAsignacionObra(id) {
-            await fetch(`http://localhost:3000/api/admin/asignaciones-obras/${id}`, { method: 'DELETE' });
+            await fetch(`/api/admin/asignaciones-obras/${id}`, { method: 'DELETE' });
             cargarDatosAsignacionObras();
         }
 
@@ -525,12 +525,12 @@
                 if(!vm) { alert('Selecciona un mes.'); return; }
                 [a, m] = vm.split('-');
             }
-            window.location.href = `http://localhost:3000/api/admin/exportar?inicio=${a}-${String(m).padStart(2,'0')}-01`; 
+            window.location.href = `/api/admin/exportar?inicio=${a}-${String(m).padStart(2,'0')}-01`; 
         }
 
         async function cargarSelectJefesObra() {
             try {
-                const res = await fetch('http://localhost:3000/api/admin/usuarios-todos');
+                const res = await fetch('/api/admin/usuarios-todos');
                 const data = await res.json();
                 if(data.success) {
                     const jefes = data.usuarios.filter(u => u.rol.toLowerCase().includes('jefe'));
@@ -545,7 +545,7 @@
             const idJefe = document.getElementById('selectJefeObraDedicacion').value;
             const mesAnio = document.getElementById('mesDedicacion').value; 
             if(!idJefe || !mesAnio) { alert('Selecciona Jefe y Mes.'); return; }
-            window.location.href = `http://localhost:3000/api/admin/exportar-dedicacion?id_usuario=${idJefe}&mes_anio=${mesAnio}`;
+            window.location.href = `/api/admin/exportar-dedicacion?id_usuario=${idJefe}&mes_anio=${mesAnio}`;
         }
     </script>
 </body>
