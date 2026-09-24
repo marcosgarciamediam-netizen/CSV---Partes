@@ -568,3 +568,52 @@ app.get('/api/jefe/:id_jefe/obras', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Servidor backend escuchando en el puerto ${PORT}`);
 });
+
+async function guardarEdicionParteModal() {
+            const idParte = document.getElementById('modalIdParte').value;
+            const horas = parseFloat(document.getElementById('modalHoras').value);
+            const tareas = document.getElementById('modalTareas').value;
+            let id_obra = document.getElementById('modalIdObraSeleccionada').value;
+
+            // Si el ID de obra está vacío, buscamos por texto exacto
+            if (!id_obra) {
+                const textoEscrito = document.getElementById('buscadorObraInput').value.trim();
+                const obraEncontrada = listaObrasGlobalAdmin.find(o => o.nombre.toLowerCase().trim() === textoEscrito.toLowerCase());
+                if (obraEncontrada) {
+                    id_obra = obraEncontrada.id_obra;
+                }
+            }
+
+            if (isNaN(horas) || !id_obra) {
+                alert('❌ Revisa que las horas sean correctas y hayas seleccionado una obra válida de la lista.');
+                return;
+            }
+
+            // Enviamos exactamente las propiedades que el servidor procesa para el parte
+            const payload = { 
+                horas: horas, 
+                tareas: tareas, 
+                id_obra: parseInt(id_obra) 
+            };
+
+            try {
+                const respuesta = await fetch(`/api/partes/${idParte}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const resultado = await respuesta.json();
+
+                if (resultado.success) {
+                    alert('✅ ¡Parte modificado correctamente!');
+                    cerrarModalEdicion();
+                    await buscarPartesFiltrados();
+                } else {
+                    alert('❌ Error del servidor: ' + (resultado.error || 'No se pudo modificar el parte.'));
+                }
+            } catch (error) {
+                console.error('Error de red al editar el parte:', error);
+                alert('❌ No se pudo conectar con el servidor.');
+            }
+        }
