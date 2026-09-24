@@ -211,6 +211,9 @@
         </div>
     </div>
 
+    <!-- DATALIST OCULTO PARA AUTOCOMPLETADO DE OBRAS -->
+    <datalist id="listaObrasSugerencias"></datalist>
+
     <script>
         const nombresSecciones = { 
             'dashboard': 'Panel de Administración', 'partes': 'Gestión de Partes de Trabajo', 
@@ -257,6 +260,11 @@
                 const data = await res.json();
                 if(data.success) {
                     listaObrasGlobalAdmin = data.obras;
+                    const datalist = document.getElementById('listaObrasSugerencias');
+                    datalist.innerHTML = '';
+                    listaObrasGlobalAdmin.forEach(o => {
+                        datalist.innerHTML += `<option value="${o.nombre}">`;
+                    });
                 }
             } catch(e) { console.error("Error cargando obras globales:", e); }
         }
@@ -299,15 +307,21 @@
         async function gestionarAccionOperario(idUsuario, fechaDefecto, nombreOperario, selectElement) {
             const accion = selectElement.value; selectElement.value = ""; 
             if (accion === 'hacer_parte') {
-                let opcionesObrasTexto = listaObrasGlobalAdmin.map(o => `${o.id_obra} -> ${o.nombre}`).join('\n');
-                const idObraPrompt = prompt(`Selecciona el ID de la obra para ${nombreOperario}:\n\n${opcionesObrasTexto}`, listaObrasGlobalAdmin[0] ? listaObrasGlobalAdmin[0].id_obra : 1);
-                if (idObraPrompt === null) return;
+                let nombreObraSugerida = listaObrasGlobalAdmin[0] ? listaObrasGlobalAdmin[0].nombre : '';
+                let nombreObraInput = prompt(`Escribe el nombre de la obra para ${nombreOperario}:`, nombreObraSugerida);
+                if (nombreObraInput === null) return;
+
+                let obraEncontrada = listaObrasGlobalAdmin.find(o => o.nombre.toLowerCase().trim() === nombreObraInput.toLowerCase().trim());
+                if (!obraEncontrada) {
+                    alert('❌ La obra especificada no existe o no está bien escrita. Revisa el nombre.');
+                    return;
+                }
 
                 const horas = prompt(`Horas a añadir/registrar para ${nombreOperario}:`, "8"); if (horas === null) return;
                 const tareas = prompt(`Tareas:`, "Trabajos pendientes"); if (tareas === null) return;
                 const fecha = prompt(`Fecha (AAAA-MM-DD):`, fechaDefecto); if (fecha === null) return;
                 
-                await enviarEstadoEspecial(idUsuario, fecha, 'trabajo', parseFloat(horas), tareas, parseInt(idObraPrompt));
+                await enviarEstadoEspecial(idUsuario, fecha, 'trabajo', parseFloat(horas), tareas, obraEncontrada.id_obra);
             } else if (accion === 'vacaciones' || accion === 'baja' || accion === 'paternidad') {
                 const fecha = prompt(`Fecha para ${accion}:`, fechaDefecto); if (fecha === null) return;
                 let idObraDefault = listaObrasGlobalAdmin[0] ? listaObrasGlobalAdmin[0].id_obra : 1;
@@ -355,7 +369,7 @@
                         totalGlobal += parseFloat(p.horas || 0);
                         contenedor.innerHTML += `
                             <div class="border-b pb-6 space-y-3 relative">
-                                <button onclick="editarParteAdmin(${p.id_parte}, ${p.horas}, '${p.tareas.replace(/'/g, "\\'")}', ${p.id_obra})" class="absolute top-0 right-0 bg-yellow-50 hover:bg-yellow-100 text-[#004b87] px-3 py-1 rounded text-xs font-bold transition">✏️ Editar</button>
+                                <button onclick="editarParteAdmin(${p.id_parte}, ${p.horas}, '${p.tareas.replace(/'/g, "\\'")}', '${p.obra_nombre.replace(/'/g, "\\'")}')" class="absolute top-0 right-0 bg-yellow-50 hover:bg-yellow-100 text-[#004b87] px-3 py-1 rounded text-xs font-bold transition">✏️ Editar</button>
                                 <div class="text-sm font-bold flex justify-between pr-20"><span>${p.operario_nombre}</span></div>
                                 <div class="text-xs font-semibold text-[#004b87] bg-yellow-50 p-2 rounded">[${p.codigo_operario || '000'}] ${p.obra_nombre}</div>
                                 <div class="bg-gray-50 p-3 rounded text-xs space-y-1">
@@ -369,22 +383,25 @@
             } catch (e) { console.error(e); }
         }
 
-        async function editarParteAdmin(idParte, horasActuales, tareasActuales, obraActual) {
+        async function editarParteAdmin(idParte, horasActuales, tareasActuales, nombreObraActual) {
             const nuevasHoras = prompt("Modificar horas trabajadas:", horasActuales);
             if (nuevasHoras === null) return;
 
             const nuevasTareas = prompt("Modificar descripción de tareas:", tareasActuales);
             if (nuevasTareas === null) return;
 
-            let listaTextoObras = listaObrasGlobalAdmin.map(o => `${o.id_obra} -> ${o.nombre}`).join('\n');
-            const nuevaObra = prompt(`Introduce el ID de la nueva obra:\n\n${listaTextoObras}`, obraActual);
-            if (nuevaObra === null) return;
+            const nombreObraInput = prompt(`Escribe el nombre de la nueva obra:`, nombreObraActual);
+            if (nombreObraInput === null) return;
+
+            let obraEncontrada = listaObrasGlobalAdmin.find(o => o.nombre.toLowerCase().trim() === nombreObraInput.toLowerCase().trim());
+            if (!obraEncontrada) {
+                alert('❌ La obra especificada no existe. Revisa el nombre introducido.');
+                return;
+            }
 
             const horasLimpias = parseFloat(nuevasHoras.replace(',', '.'));
-            const obraLimpia = parseInt(nuevaObra);
-
-            if (isNaN(horasLimpias) || isNaN(obraLimpia)) {
-                alert('❌ Datos incorrectos. Revisa las horas o el ID de obra.');
+            if (isNaN(horasLimpias)) {
+                alert('❌ Formato de horas incorrecto.');
                 return;
             }
 
@@ -392,7 +409,7 @@
                 const respuesta = await fetch(`/api/partes/${idParte}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ horas: horasLimpias, tareas: nuevasTareas, id_obra: obraLimpia })
+                    body: JSON.stringify({ horas: horasLimpias, tareas: nuevasTareas, id_obra: obraEncontrada.id_obra })
                 });
 
                 const resultado = await respuesta.json();
