@@ -12,8 +12,8 @@
         <!-- Cabecera -->
         <header class="bg-white p-4 sm:p-6 rounded-2xl shadow-md border-t-4 border-[#004b87] flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-2xl font-black text-[#004b87]">Panel de Administración</h1>
-                <p class="text-xs text-gray-500">Gestión global de obras, usuarios, partes y asignaciones</p>
+                <h1 class="text-2xl font-black text-[#004b87]">CSV Construcción - Administración</h1>
+                <p class="text-xs text-gray-500">Panel de control general para la gestión de partes, obras y personal</p>
             </div>
             <div class="flex items-center gap-3">
                 <span id="nombreAdmin" class="text-sm font-bold text-gray-700"></span>
@@ -26,16 +26,17 @@
         <!-- Navegación de Pestañas -->
         <nav class="flex flex-wrap gap-2 bg-white p-3 rounded-2xl shadow-sm">
             <button onclick="cambiarVista('partes')" id="btn-partes" class="px-4 py-2 rounded-xl text-xs font-bold transition bg-[#004b87] text-white">Partes de Trabajo</button>
-            <button onclick="cambiarVista('usuarios')" id="btn-usuarios" class="px-4 py-2 rounded-xl text-xs font-bold transition text-gray-600 hover:bg-gray-100">Usuarios</button>
+            <button onclick="cambiarVista('usuarios')" id="btn-usuarios" class="px-4 py-2 rounded-xl text-xs font-bold transition text-gray-600 hover:bg-gray-100">Usuarios y Personal</button>
             <button onclick="cambiarVista('obras')" id="btn-obras" class="px-4 py-2 rounded-xl text-xs font-bold transition text-gray-600 hover:bg-gray-100">Obras</button>
             <button onclick="cambiarVista('asignaciones')" id="btn-asignaciones" class="px-4 py-2 rounded-xl text-xs font-bold transition text-gray-600 hover:bg-gray-100">Asignaciones</button>
         </nav>
 
-        <!-- Contenedor Principal de Vistas -->
+        <!-- Contenido Principal -->
         <main class="space-y-6">
-            <!-- Vista Partes -->
+            
+            <!-- VISTA 1: PARTES -->
             <section id="vista-partes" class="bg-white p-6 rounded-2xl shadow-md space-y-4">
-                <h2 class="text-lg font-extrabold text-[#004b87]">Filtro y Consulta de Partes</h2>
+                <h2 class="text-lg font-extrabold text-[#004b87]">Filtro y Consulta de Partes de Trabajo</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-600 mb-1">Operario</label>
@@ -59,7 +60,7 @@
                     </div>
                 </div>
                 <button onclick="buscarPartesFiltrados()" class="bg-[#004b87] text-white font-bold text-xs px-5 py-3 rounded-xl shadow hover:bg-[#003366] transition">
-                    Filtrar Partes
+                    Aplicar Filtros
                 </button>
 
                 <div class="overflow-x-auto pt-4">
@@ -70,21 +71,21 @@
                                 <th class="p-3">Operario</th>
                                 <th class="p-3">Obra</th>
                                 <th class="p-3">Horas</th>
-                                <th class="p-3">Tareas</th>
+                                <th class="p-3">Tareas Realizadas</th>
                             </tr>
                         </thead>
                         <tbody id="tablaPartesBody" class="divide-y divide-gray-100 text-xs">
-                            <!-- Los datos se cargan dinámicamente -->
+                            <!-- Datos dinámicos -->
                         </tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- Vista Usuarios -->
+            <!-- VISTA 2: USUARIOS -->
             <section id="vista-usuarios" class="bg-white p-6 rounded-2xl shadow-md space-y-4 hidden">
-                <div class="flex justify-between items-center">
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
                     <h2 class="text-lg font-extrabold text-[#004b87]">Gestión de Personal y Usuarios</h2>
-                    <button onclick="abrirModalUsuario()" class="bg-[#ffcc00] text-[#004b87] font-extrabold text-xs px-4 py-2.5 rounded-xl shadow hover:bg-yellow-400 transition">
+                    <button onclick="abrirModalCrearUsuario()" class="bg-[#ffcc00] text-[#004b87] font-extrabold text-xs px-4 py-2.5 rounded-xl shadow hover:bg-yellow-400 transition">
                         + Nuevo Usuario
                     </button>
                 </div>
@@ -101,17 +102,17 @@
                             </tr>
                         </thead>
                         <tbody id="tablaUsuariosBody" class="divide-y divide-gray-100 text-xs">
-                            <!-- Cargado dinámicamente -->
+                            <!-- Datos dinámicos -->
                         </tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- Vista Obras -->
+            <!-- VISTA 3: OBRAS -->
             <section id="vista-obras" class="bg-white p-6 rounded-2xl shadow-md space-y-4 hidden">
-                <div class="flex justify-between items-center">
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
                     <h2 class="text-lg font-extrabold text-[#004b87]">Gestión de Obras</h2>
-                    <button onclick="crearObraPrompt()" class="bg-[#ffcc00] text-[#004b87] font-extrabold text-xs px-4 py-2.5 rounded-xl shadow hover:bg-yellow-400 transition">
+                    <button onclick="crearObraNueva()" class="bg-[#ffcc00] text-[#004b87] font-extrabold text-xs px-4 py-2.5 rounded-xl shadow hover:bg-yellow-400 transition">
                         + Nueva Obra
                     </button>
                 </div>
@@ -125,18 +126,68 @@
                             </tr>
                         </thead>
                         <tbody id="tablaObrasBody" class="divide-y divide-gray-100 text-xs">
-                            <!-- Cargado dinámicamente -->
+                            <!-- Datos dinámicos -->
                         </tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- Vista Asignaciones -->
+            <!-- VISTA 4: ASIGNACIONES -->
             <section id="vista-asignaciones" class="bg-white p-6 rounded-2xl shadow-md space-y-4 hidden">
-                <h2 class="text-lg font-extrabold text-[#004b87]">Asignación de Cuadrillas y Obras</h2>
-                <p class="text-xs text-gray-500">Panel de control de asignaciones activas en el sistema.</p>
+                <h2 class="text-lg font-extrabold text-[#004b87]">Panel de Asignaciones (Cuadrillas y Obras)</h2>
+                <p class="text-xs text-gray-500">Aquí puedes supervisar las asignaciones de operarios a encargados y obras a jefes de obra.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <div class="p-4 bg-gray-50 rounded-xl border">
+                        <h3 class="font-bold text-sm text-[#004b87] mb-2">Asignaciones de Plantilla</h3>
+                        <div id="listaAsignacionesPlantilla" class="text-xs space-y-1 text-gray-600">Cargando...</div>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-xl border">
+                        <h3 class="font-bold text-sm text-[#004b87] mb-2">Asignaciones de Obras a Jefes</h3>
+                        <div id="listaAsignacionesObras" class="text-xs space-y-1 text-gray-600">Cargando...</div>
+                    </div>
+                </div>
             </section>
         </main>
+    </div>
+
+    <!-- MODAL SIMPLE PARA CREAR USUARIO -->
+    <div id="modalUsuario" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md space-y-4">
+            <h3 class="text-lg font-extrabold text-[#004b87]">Crear Nuevo Usuario</h3>
+            <form id="formCrearUsuario" onsubmit="guardarNuevoUsuario(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">Nombre Completo</label>
+                    <input type="text" id="nuevoNombre" class="w-full border p-2.5 rounded-xl text-sm" required />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">Correo Electrónico</label>
+                    <input type="email" id="nuevoEmail" class="w-full border p-2.5 rounded-xl text-sm" required />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">Contraseña Inicial</label>
+                    <input type="password" id="nuevoPassword" placeholder="Por defecto 123456" class="w-full border p-2.5 rounded-xl text-sm" />
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">Rol</label>
+                        <select id="nuevoRol" class="w-full border p-2.5 rounded-xl text-sm">
+                            <option value="operario">Operario</option>
+                            <option value="encargado">Encargado</option>
+                            <option value="jefe_de_obra">Jefe de Obra</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">Categoría</label>
+                        <input type="text" id="nuevaCategoria" value="Oficial" class="w-full border p-2.5 rounded-xl text-sm" />
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="cerrarModalUsuario()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-xs font-bold">Cancelar</button>
+                    <button type="submit" class="bg-[#004b87] text-white px-4 py-2 rounded-xl text-xs font-bold">Guardar Usuario</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script>
@@ -144,7 +195,6 @@
             const nombre = localStorage.getItem('usuario_nombre') || 'Administrador';
             document.getElementById('nombreAdmin').textContent = `Hola, ${nombre}`;
             
-            cargarAlertas();
             cargarFiltrosPartes();
             buscarPartesFiltrados();
         });
@@ -155,42 +205,18 @@
         }
 
         function cambiarVista(vista) {
-            document.getElementById('vista-partes').classList.add('hidden');
-            document.getElementById('vista-usuarios').classList.add('hidden');
-            document.getElementById('vista-obras').classList.add('hidden');
-            document.getElementById('vista-asignaciones').classList.add('hidden');
+            ['partes', 'usuarios', 'obras', 'asignaciones'].forEach(v => {
+                document.getElementById(`vista-${v}`).classList.add('hidden');
+                document.getElementById(`btn-${v}`).className = "px-4 py-2 rounded-xl text-xs font-bold transition text-gray-600 hover:bg-gray-100";
+            });
 
-            document.getElementById('btn-partes').className = "px-4 py-2 rounded-xl text-xs font-bold transition text-gray-600 hover:bg-gray-100";
-            document.getElementById('btn-usuarios').className = "px-4 py-2 rounded-xl text-xs font-bold transition text-gray-600 hover:bg-gray-100";
-            document.getElementById('btn-obras').className = "px-4 py-2 rounded-xl text-xs font-bold transition text-gray-600 hover:bg-gray-100";
-            document.getElementById('btn-asignaciones').className = "px-4 py-2 rounded-xl text-xs font-bold transition text-gray-600 hover:bg-gray-100";
+            document.getElementById(`vista-${vista}`).classList.remove('hidden');
+            document.getElementById(`btn-${vista}`).className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-[#004b87] text-white";
 
-            if (vista === 'partes') {
-                document.getElementById('vista-partes').classList.remove('hidden');
-                document.getElementById('btn-partes').className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-[#004b87] text-white";
-                buscarPartesFiltrados();
-            } else if (vista === 'usuarios') {
-                document.getElementById('vista-usuarios').classList.remove('hidden');
-                document.getElementById('btn-usuarios').className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-[#004b87] text-white";
-                cargarUsuariosAdmin();
-            } else if (vista === 'obras') {
-                document.getElementById('vista-obras').classList.remove('hidden');
-                document.getElementById('btn-obras').className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-[#004b87] text-white";
-                cargarObrasAdmin();
-            } else if (vista === 'asignaciones') {
-                document.getElementById('vista-asignaciones').classList.remove('hidden');
-                document.getElementById('btn-asignaciones').className = "px-4 py-2 rounded-xl text-xs font-bold transition bg-[#004b87] text-white";
-            }
-        }
-
-        async function cargarAlertas() {
-            try {
-                const res = await fetch('/api/admin/alertas');
-                const data = await res.json();
-                console.log("Alertas de operarios:", data);
-            } catch (err) {
-                console.error("Error cargando alertas:", err);
-            }
+            if (vista === 'partes') buscarPartesFiltrados();
+            if (vista === 'usuarios') cargarUsuariosAdmin();
+            if (vista === 'obras') cargarObrasAdmin();
+            if (vista === 'asignaciones') cargarAsignacionesAdmin();
         }
 
         async function cargarFiltrosPartes() {
@@ -199,6 +225,7 @@
                 const dataOp = await resOp.json();
                 if(dataOp.success) {
                     const selectOp = document.getElementById('filtroOperario');
+                    selectOp.innerHTML = '<option value="">Todos los operarios</option>';
                     dataOp.operarios.forEach(op => {
                         selectOp.innerHTML += `<option value="${op.id_usuario}">${op.nombre}</option>`;
                     });
@@ -208,6 +235,7 @@
                 const dataOb = await resOb.json();
                 if(dataOb.success) {
                     const selectOb = document.getElementById('filtroObra');
+                    selectOb.innerHTML = '<option value="">Todas las obras</option>';
                     dataOb.obras.forEach(ob => {
                         selectOb.innerHTML += `<option value="${ob.id_obra}">${ob.nombre}</option>`;
                     });
@@ -238,13 +266,13 @@
                                 <td class="p-3 font-medium">${p.fecha_registro}</td>
                                 <td class="p-3 font-bold text-[#004b87]">${p.operario_nombre}</td>
                                 <td class="p-3">${p.obra_nombre}</td>
-                                <td class="p-3">${p.horas}h</td>
+                                <td class="p-3 font-semibold">${p.horas}h</td>
                                 <td class="p-3 text-gray-600">${p.tareas || '-'}</td>
                             </tr>
                         `;
                     });
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-400">No se encontraron partes con los filtros seleccionados.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-400">No se encontraron partes de trabajo.</td></tr>`;
                 }
             } catch (err) {
                 console.error("Error al buscar partes:", err);
@@ -300,7 +328,66 @@
             }
         }
 
-        async function crearObraPrompt() {
+        async function cargarAsignacionesAdmin() {
+            try {
+                const resP = await fetch('/api/admin/asignaciones-plantilla');
+                const dataP = await resP.json();
+                const divP = document.getElementById('listaAsignacionesPlantilla');
+                if(dataP.success && dataP.asignaciones.length > 0) {
+                    divP.innerHTML = dataP.asignaciones.map(a => `<div>• <b>${a.encargado_nombre}</b> encarga a ${a.operario_nombre}</div>`).join('');
+                } else {
+                    divP.innerHTML = '<span class="text-gray-400">No hay asignaciones de plantilla.</span>';
+                }
+
+                const resO = await fetch('/api/admin/asignaciones-obras');
+                const dataO = await resO.json();
+                const divO = document.getElementById('listaAsignacionesObras');
+                if(dataO.success && dataO.asignaciones.length > 0) {
+                    divO.innerHTML = dataO.asignaciones.map(a => `<div>• <b>${a.jefe_nombre}</b> dirige ${a.obra_nombre}</div>`).join('');
+                } else {
+                    divO.innerHTML = '<span class="text-gray-400">No hay asignaciones de obras a jefes.</span>';
+                }
+            } catch (err) {
+                console.error("Error cargando asignaciones:", err);
+            }
+        }
+
+        function abrirModalCrearUsuario() {
+            document.getElementById('modalUsuario').classList.remove('hidden');
+        }
+
+        function cerrarModalUsuario() {
+            document.getElementById('modalUsuario').classList.add('hidden');
+        }
+
+        async function guardarNuevoUsuario(e) {
+            e.preventDefault();
+            const nombre = document.getElementById('nuevoNombre').value;
+            const email = document.getElementById('nuevoEmail').value;
+            const password = document.getElementById('nuevoPassword').value;
+            const rol = document.getElementById('nuevoRol').value;
+            const categoria = document.getElementById('nuevaCategoria').value;
+
+            try {
+                const res = await fetch('/api/admin/usuarios', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre, email, password, rol, categoria })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    alert("¡Usuario creado con éxito!");
+                    cerrarModalUsuario();
+                    cargarUsuariosAdmin();
+                } else {
+                    alert("Error: " + data.error);
+                }
+            } catch (err) {
+                console.error("Error al crear usuario:", err);
+            }
+        }
+
+        async function crearObraNueva() {
             const nombre = prompt("Introduce el nombre de la nueva obra:");
             if (!nombre) return;
 
@@ -320,10 +407,6 @@
             } catch (err) {
                 console.error("Error al crear obra:", err);
             }
-        }
-
-        function abrirModalUsuario() {
-            alert("Modal de creación de usuario en desarrollo o integración directa.");
         }
     </script>
 </body>
