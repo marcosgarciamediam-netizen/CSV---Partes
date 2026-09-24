@@ -418,7 +418,7 @@
         function filtrarObrasRapido(query) {
             const contenedor = document.getElementById('listaObrasRapidoResultados');
             contenedor.innerHTML = '';
-            const filtradas = listaObrasGlobalAdmin.filter(o => o.nombre.toLowerCase().includes(query.toLowerCase())).slice(0, 50); // Muestra hasta 50 para rendimiento fluido
+            const filtradas = listaObrasGlobalAdmin.filter(o => o.nombre.toLowerCase().includes(query.toLowerCase())).slice(0, 50);
             
             if (filtradas.length === 0) {
                 contenedor.innerHTML = '<div class="p-3 text-xs text-gray-400 text-center">No se encontraron obras.</div>';
@@ -443,12 +443,20 @@
             const id_usuario = document.getElementById('rapidoIdUsuario').value;
             const fecha = document.getElementById('rapidoFecha').value;
             const tipo = document.getElementById('rapidoTipoAccion').value;
-            const id_obra = document.getElementById('rapidoIdObraSeleccionada').value;
+            let id_obra = document.getElementById('rapidoIdObraSeleccionada').value;
             const horas = parseFloat(document.getElementById('rapidoHoras').value || 8);
             const tareas = document.getElementById('rapidoTareas').value || 'Trabajo';
 
             if (!id_obra) {
-                alert('⚠️ Por favor, busca y selecciona una obra de la lista.');
+                const textoEscrito = document.getElementById('buscadorObraRapidoInput').value.trim();
+                const obraEncontrada = listaObrasGlobalAdmin.find(o => o.nombre.toLowerCase().trim() === textoEscrito.toLowerCase());
+                if (obraEncontrada) {
+                    id_obra = obraEncontrada.id_obra;
+                }
+            }
+
+            if (!id_obra) {
+                alert('⚠️ Por favor, selecciona una obra de la lista haciendo clic sobre ella.');
                 return;
             }
 
@@ -555,10 +563,19 @@
             const idParte = document.getElementById('modalIdParte').value;
             const horas = parseFloat(document.getElementById('modalHoras').value);
             const tareas = document.getElementById('modalTareas').value;
-            const id_obra = document.getElementById('modalIdObraSeleccionada').value;
+            let id_obra = document.getElementById('modalIdObraSeleccionada').value;
+
+            // Si el ID de obra está vacío pero el usuario escribió texto exacto, intentamos resolverlo
+            if (!id_obra) {
+                const textoEscrito = document.getElementById('buscadorObraInput').value.trim();
+                const obraEncontrada = listaObrasGlobalAdmin.find(o => o.nombre.toLowerCase().trim() === textoEscrito.toLowerCase());
+                if (obraEncontrada) {
+                    id_obra = obraEncontrada.id_obra;
+                }
+            }
 
             if (isNaN(horas) || !id_obra) {
-                alert('❌ Revisa que las horas sean correctas y hayas seleccionado una obra del buscador.');
+                alert('❌ Revisa que las horas sean correctas y hayas seleccionado una obra del buscador haciendo clic.');
                 return;
             }
 
