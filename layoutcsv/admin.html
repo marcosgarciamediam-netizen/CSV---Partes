@@ -71,7 +71,7 @@
                 <!-- DASHBOARD -->
                 <section id="seccion-dashboard" class="vista-panel space-y-6">
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                        <h2 class="text-lg font-bold text-red-700 flex items-center gap-2 mb-3">⚠️ Alertas: Partes Pendientes de Hoy</h2>
+                        <h2 class="text-lg font-bold text-red-700 flex items-center gap-2 mb-3">⚠️ Alertas: Partes Pendientes e Insuficientes (Hoy)</h2>
                         <div id="listaAlertas" class="space-y-3"><div class="p-4 rounded bg-gray-50 text-gray-500 text-sm">Cargando estado...</div></div>
                     </div>
                 </section>
@@ -256,9 +256,27 @@
                 const contenedor = document.getElementById('listaAlertas');
                 contenedor.innerHTML = '';
                 if(data.success) {
-                    if(data.alertas.length === 0) { contenedor.innerHTML = '<div class="bg-green-50 border-l-4 border-green-600 p-4 rounded text-green-900 text-sm font-semibold">✅ ¡Excelente! Todos los operarios han entregado su parte de hoy.</div>'; return; }
+                    if(data.alertas.length === 0) { contenedor.innerHTML = '<div class="bg-green-50 border-l-4 border-green-600 p-4 rounded text-green-900 text-sm font-semibold">✅ ¡Excelente! Todos los operarios han entregado sus 8 horas completas hoy.</div>'; return; }
                     data.alertas.forEach(op => {
-                        contenedor.innerHTML += `<div class="bg-white border-l-4 border-red-600 p-4 rounded text-red-900 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-3 text-sm"><div><strong>${op.nombre}</strong> (Cód: ${op.codigo_operario}) no ha introducido el parte de hoy.</div><select onchange="gestionarAccionOperario(${op.id_usuario}, '${op.nombre}', this)" class="border p-2 rounded text-xs bg-yellow-50 text-[#004b87] font-bold"><option value="" disabled selected>⚡ Asignar estado...</option><option value="hacer_parte">📝 Hacer parte</option><option value="vacaciones">🏖️ Vacaciones</option><option value="permiso">⏱️ Permiso</option><option value="baja">🏥 Baja</option><option value="paternidad">👶 Paternidad</option></select></div>`;
+                        let textoAlerta = `<strong>${op.nombre}</strong> (Cód: ${op.codigo_operario})`;
+                        if (op.horas_registradas !== undefined && op.horas_registradas !== null) {
+                            textoAlerta += ` ha registrado <span class="text-amber-700 font-bold">${op.horas_registradas}h</span> hoy (menos de 8h).`;
+                        } else {
+                            textoAlerta += ` no ha introducido ningún parte hoy.`;
+                        }
+
+                        contenedor.innerHTML += `
+                            <div class="bg-white border-l-4 border-red-600 p-4 rounded text-red-900 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-3 text-sm">
+                                <div>${textoAlerta}</div>
+                                <select onchange="gestionarAccionOperario(${op.id_usuario}, '${op.nombre}', this)" class="border p-2 rounded text-xs bg-yellow-50 text-[#004b87] font-bold">
+                                    <option value="" disabled selected>⚡ Asignar estado / horas...</option>
+                                    <option value="hacer_parte">📝 Completar / Hacer parte</option>
+                                    <option value="vacaciones">🏖️ Vacaciones</option>
+                                    <option value="permiso">⏱️ Permiso</option>
+                                    <option value="baja">🏥 Baja</option>
+                                    <option value="paternidad">👶 Paternidad</option>
+                                </select>
+                            </div>`;
                     });
                 }
             } catch(e) { console.error(e); }
@@ -267,8 +285,8 @@
         async function gestionarAccionOperario(idUsuario, nombreOperario, selectElement) {
             const accion = selectElement.value; selectElement.value = ""; const hoy = new Date().toISOString().split('T')[0];
             if (accion === 'hacer_parte') {
-                const horas = prompt(`Horas para ${nombreOperario}:`, "8"); if (horas === null) return;
-                const tareas = prompt(`Tareas:`, "Trabajos asignados"); if (tareas === null) return;
+                const horas = prompt(`Horas a añadir/registrar para ${nombreOperario}:`, "8"); if (horas === null) return;
+                const tareas = prompt(`Tareas:`, "Trabajos complementarios"); if (tareas === null) return;
                 const fecha = prompt(`Fecha (AAAA-MM-DD):`, hoy); if (fecha === null) return;
                 await enviarEstadoEspecial(idUsuario, fecha, 'trabajo', parseFloat(horas), tareas);
             } else if (accion === 'vacaciones' || accion === 'baja' || accion === 'paternidad') {
