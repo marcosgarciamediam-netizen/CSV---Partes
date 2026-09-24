@@ -211,8 +211,81 @@
         </div>
     </div>
 
-    <!-- DATALIST OCULTO PARA AUTOCOMPLETADO DE OBRAS -->
-    <datalist id="listaObrasSugerencias"></datalist>
+    <!-- MODAL DE EDICIÓN AVANZADA DE PARTES (CON BUSCADOR DE OBRAS) -->
+    <div id="modalEditarParte" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-[#004b87] text-white p-4 flex justify-between items-center">
+                <h3 class="font-bold text-base">✏️ Modificar Parte de Trabajo</h3>
+                <button onclick="cerrarModalEdicion()" class="text-white font-bold text-lg px-2 hover:bg-blue-900 rounded">✕</button>
+            </div>
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                <input type="hidden" id="modalIdParte" />
+                
+                <div>
+                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Horas Trabajadas</label>
+                    <input type="number" id="modalHoras" step="0.5" min="0.5" max="24" class="w-full border p-2.5 rounded-xl text-sm bg-gray-50" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Descripción de Tareas</label>
+                    <textarea id="modalTareas" rows="3" class="w-full border p-2.5 rounded-xl text-sm bg-gray-50"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Buscar Obra (Escribe para filtrar entre +1000 obras)</label>
+                    <input type="text" id="buscadorObraInput" oninput="filtrarObrasModal(this.value)" placeholder="Escribe el nombre de la obra..." class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 mb-2 font-semibold" autocomplete="off" />
+                    
+                    <div id="listaObrasResultados" class="border rounded-xl max-h-48 overflow-y-auto bg-white divide-y divide-gray-100 shadow-inner">
+                        <!-- Obras filtradas dinámicamente -->
+                    </div>
+                    <input type="hidden" id="modalIdObraSeleccionada" />
+                </div>
+            </div>
+            <div class="bg-gray-50 px-6 py-4 border-t flex justify-end gap-3">
+                <button onclick="cerrarModalEdicion()" class="px-4 py-2 bg-gray-200 text-gray-700 font-bold text-xs rounded-xl hover:bg-gray-300 transition">Cancelar</button>
+                <button onclick="guardarEdicionParteModal()" class="px-5 py-2 bg-[#ffcc00] text-[#004b87] font-extrabold text-xs rounded-xl shadow hover:bg-yellow-400 transition">💾 Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE ACCIÓN RÁPIDA / COMPLETAR PARTE (CON BUSCADOR DE OBRAS) -->
+    <div id="modalAccionRapida" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-[#004b87] text-white p-4 flex justify-between items-center">
+                <h3 id="tituloModalAccion" class="font-bold text-base">📝 Registrar Parte Pendiente</h3>
+                <button onclick="cerrarModalAccion()" class="text-white font-bold text-lg px-2 hover:bg-blue-900 rounded">✕</button>
+            </div>
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                <input type="hidden" id="rapidoIdUsuario" />
+                <input type="hidden" id="rapidoFecha" />
+                <input type="hidden" id="rapidoTipoAccion" />
+
+                <div id="bloqueHorasRapido">
+                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Horas</label>
+                    <input type="number" id="rapidoHoras" step="0.5" min="0.5" max="24" value="8" class="w-full border p-2.5 rounded-xl text-sm bg-gray-50" />
+                </div>
+
+                <div id="bloqueTareasRapido">
+                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Tareas / Detalle</label>
+                    <textarea id="rapidoTareas" rows="2" placeholder="Labores realizadas..." class="w-full border p-2.5 rounded-xl text-sm bg-gray-50"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Buscar Obra (Escribe para filtrar entre +1000 obras)</label>
+                    <input type="text" id="buscadorObraRapidoInput" oninput="filtrarObrasRapido(this.value)" placeholder="Escribe el nombre de la obra..." class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 mb-2 font-semibold" autocomplete="off" />
+                    
+                    <div id="listaObrasRapidoResultados" class="border rounded-xl max-h-48 overflow-y-auto bg-white divide-y divide-gray-100 shadow-inner">
+                        <!-- Obras filtradas dinámicamente -->
+                    </div>
+                    <input type="hidden" id="rapidoIdObraSeleccionada" />
+                </div>
+            </div>
+            <div class="bg-gray-50 px-6 py-4 border-t flex justify-end gap-3">
+                <button onclick="cerrarModalAccion()" class="px-4 py-2 bg-gray-200 text-gray-700 font-bold text-xs rounded-xl hover:bg-gray-300 transition">Cancelar</button>
+                <button onclick="ejecutarAccionRapidaModal()" class="px-5 py-2 bg-[#ffcc00] text-[#004b87] font-extrabold text-xs rounded-xl shadow hover:bg-yellow-400 transition">🚀 Registrar</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         const nombresSecciones = { 
@@ -260,15 +333,11 @@
                 const data = await res.json();
                 if(data.success) {
                     listaObrasGlobalAdmin = data.obras;
-                    const datalist = document.getElementById('listaObrasSugerencias');
-                    datalist.innerHTML = '';
-                    listaObrasGlobalAdmin.forEach(o => {
-                        datalist.innerHTML += `<option value="${o.nombre}">`;
-                    });
                 }
             } catch(e) { console.error("Error cargando obras globales:", e); }
         }
 
+        // --- GESTIÓN DE ALERTAS Y MODAL RÁPIDO ---
         async function cargarAlertas() {
             try {
                 const res = await fetch('/api/admin/alertas');
@@ -287,10 +356,11 @@
                             textoAlerta += `no tiene parte registrado.`;
                         }
 
+                        let fechaRaw = op.fecha || new Date().toISOString().split('T')[0];
                         contenedor.innerHTML += `
                             <div class="bg-white border-l-4 border-red-600 p-4 rounded text-red-900 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-3 text-sm">
                                 <div>${textoAlerta}</div>
-                                <select onchange="gestionarAccionOperario(${op.id_usuario}, '${op.fecha || new Date().toISOString().split('T')[0]}', '${op.nombre}', this)" class="border p-2 rounded text-xs bg-yellow-50 text-[#004b87] font-bold">
+                                <select onchange="abrirModalAccionOperario(${op.id_usuario}, '${fechaRaw}', '${op.nombre}', this)" class="border p-2 rounded text-xs bg-yellow-50 text-[#004b87] font-bold">
                                     <option value="" disabled selected>⚡ Asignar estado / horas...</option>
                                     <option value="hacer_parte">📝 Completar / Hacer parte</option>
                                     <option value="vacaciones">🏖️ Vacaciones</option>
@@ -304,48 +374,107 @@
             } catch(e) { console.error(e); }
         }
 
-        async function gestionarAccionOperario(idUsuario, fechaDefecto, nombreOperario, selectElement) {
-            const accion = selectElement.value; selectElement.value = ""; 
+        function abrirModalAccionOperario(idUsuario, fecha, nombreOperario, selectElement) {
+            const accion = selectElement.value; selectElement.value = "";
+            document.getElementById('rapidoIdUsuario').value = idUsuario;
+            document.getElementById('rapidoFecha').value = fecha;
+            document.getElementById('rapidoTipoAccion').value = accion;
+            
+            document.getElementById('buscadorObraRapidoInput').value = '';
+            document.getElementById('rapidoIdObraSeleccionada').value = '';
+            filtrarObrasRapido('');
+
+            const titulo = document.getElementById('tituloModalAccion');
+            const bHoras = document.getElementById('bloqueHorasRapido');
+            const bTareas = document.getElementById('bloqueTareasRapido');
+
             if (accion === 'hacer_parte') {
-                let nombreObraSugerida = listaObrasGlobalAdmin[0] ? listaObrasGlobalAdmin[0].nombre : '';
-                let nombreObraInput = prompt(`Escribe el nombre de la obra para ${nombreOperario}:`, nombreObraSugerida);
-                if (nombreObraInput === null) return;
-
-                let obraEncontrada = listaObrasGlobalAdmin.find(o => o.nombre.toLowerCase().trim() === nombreObraInput.toLowerCase().trim());
-                if (!obraEncontrada) {
-                    alert('❌ La obra especificada no existe o no está bien escrita. Revisa el nombre.');
-                    return;
-                }
-
-                const horas = prompt(`Horas a añadir/registrar para ${nombreOperario}:`, "8"); if (horas === null) return;
-                const tareas = prompt(`Tareas:`, "Trabajos pendientes"); if (tareas === null) return;
-                const fecha = prompt(`Fecha (AAAA-MM-DD):`, fechaDefecto); if (fecha === null) return;
-                
-                await enviarEstadoEspecial(idUsuario, fecha, 'trabajo', parseFloat(horas), tareas, obraEncontrada.id_obra);
+                titulo.textContent = `📝 Completar Parte para ${nombreOperario} (${fecha})`;
+                bHoras.classList.remove('hidden');
+                bTareas.classList.remove('hidden');
+                document.getElementById('rapidoHoras').value = '8';
+                document.getElementById('rapidoTareas').value = 'Trabajos pendientes';
             } else if (accion === 'vacaciones' || accion === 'baja' || accion === 'paternidad') {
-                const fecha = prompt(`Fecha para ${accion}:`, fechaDefecto); if (fecha === null) return;
-                let idObraDefault = listaObrasGlobalAdmin[0] ? listaObrasGlobalAdmin[0].id_obra : 1;
-                await enviarEstadoEspecial(idUsuario, fecha, accion, 8, accion.toUpperCase(), idObraDefault);
+                titulo.textContent = `🏖️ Registrar ${accion.toUpperCase()} para ${nombreOperario} (${fecha})`;
+                bHoras.classList.add('hidden');
+                bTareas.classList.add('hidden');
+                document.getElementById('rapidoHoras').value = '8';
+                document.getElementById('rapidoTareas').value = accion.toUpperCase();
             } else if (accion === 'permiso') {
-                const horas = prompt(`Horas de permiso:`, "4"); if (horas === null) return;
-                const fecha = prompt(`Fecha:`, fechaDefecto); if (fecha === null) return;
-                let idObraDefault = listaObrasGlobalAdmin[0] ? listaObrasGlobalAdmin[0].id_obra : 1;
-                await enviarEstadoEspecial(idUsuario, fecha, 'permiso', parseFloat(horas), 'Permiso', idObraDefault);
+                titulo.textContent = `⏱️ Registrar Permiso para ${nombreOperario} (${fecha})`;
+                bHoras.classList.remove('hidden');
+                bTareas.classList.add('hidden');
+                document.getElementById('rapidoHoras').value = '4';
+                document.getElementById('rapidoTareas').value = 'Permiso';
             }
+
+            document.getElementById('modalAccionRapida').classList.remove('hidden');
         }
 
-        async function enviarEstadoEspecial(idUsuario, fecha, tipo, horas, tareas, id_obra) {
+        function cerrarModalAccion() {
+            document.getElementById('modalAccionRapida').classList.add('hidden');
+        }
+
+        function filtrarObrasRapido(query) {
+            const contenedor = document.getElementById('listaObrasRapidoResultados');
+            contenedor.innerHTML = '';
+            const filtradas = listaObrasGlobalAdmin.filter(o => o.nombre.toLowerCase().includes(query.toLowerCase())).slice(0, 50); // Muestra hasta 50 para rendimiento fluido
+            
+            if (filtradas.length === 0) {
+                contenedor.innerHTML = '<div class="p-3 text-xs text-gray-400 text-center">No se encontraron obras.</div>';
+                return;
+            }
+
+            filtradas.forEach(o => {
+                contenedor.innerHTML += `
+                    <div onclick="seleccionarObraRapido(${o.id_obra}, '${o.nombre.replace(/'/g, "\\'")}')" class="p-2.5 text-xs text-gray-700 hover:bg-yellow-50 hover:text-[#004b87] cursor-pointer font-medium transition">
+                        🏢 ${o.nombre}
+                    </div>`;
+            });
+        }
+
+        function seleccionarObraRapido(idObra, nombreObra) {
+            document.getElementById('buscadorObraRapidoInput').value = nombreObra;
+            document.getElementById('rapidoIdObraSeleccionada').value = idObra;
+            document.getElementById('listaObrasRapidoResultados').innerHTML = `<div class="p-2.5 text-xs font-bold text-green-700 bg-green-50">✅ Obra seleccionada: ${nombreObra}</div>`;
+        }
+
+        async function ejecutarAccionRapidaModal() {
+            const id_usuario = document.getElementById('rapidoIdUsuario').value;
+            const fecha = document.getElementById('rapidoFecha').value;
+            const tipo = document.getElementById('rapidoTipoAccion').value;
+            const id_obra = document.getElementById('rapidoIdObraSeleccionada').value;
+            const horas = parseFloat(document.getElementById('rapidoHoras').value || 8);
+            const tareas = document.getElementById('rapidoTareas').value || 'Trabajo';
+
+            if (!id_obra) {
+                alert('⚠️ Por favor, busca y selecciona una obra de la lista.');
+                return;
+            }
+
+            let endpointTipo = tipo;
+            if (tipo === 'hacer_parte') endpointTipo = 'trabajo';
+
             try {
                 const res = await fetch('/api/admin/estado-especial', { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ id_usuario: idUsuario, fecha, tipo, horas, tareas, id_obra }) 
+                    body: JSON.stringify({ id_usuario, fecha, tipo: endpointTipo, horas, tareas, id_obra }) 
                 });
                 const data = await res.json();
-                if (data.success) { alert('✅ ¡Registrado!'); await cargarAlertas(); await buscarPartesFiltrados(); }
+                if (data.success) { 
+                    alert('✅ ¡Registrado con éxito!'); 
+                    cerrarModalAccion();
+                    await cargarAlertas(); 
+                    await buscarPartesFiltrados(); 
+                } else {
+                    alert('❌ Error al registrar.');
+                }
             } catch(e) { console.error(e); }
         }
 
+
+        // --- GESTIÓN DE CONSULTA Y EDICIÓN DE PARTES CON MODAL ---
         async function cargarFiltrosPartes() {
             try {
                 const resOps = await fetch('/api/admin/operarios'); const dataOps = await resOps.json();
@@ -369,7 +498,7 @@
                         totalGlobal += parseFloat(p.horas || 0);
                         contenedor.innerHTML += `
                             <div class="border-b pb-6 space-y-3 relative">
-                                <button onclick="editarParteAdmin(${p.id_parte}, ${p.horas}, '${p.tareas.replace(/'/g, "\\'")}', '${p.obra_nombre.replace(/'/g, "\\'")}')" class="absolute top-0 right-0 bg-yellow-50 hover:bg-yellow-100 text-[#004b87] px-3 py-1 rounded text-xs font-bold transition">✏️ Editar</button>
+                                <button onclick="abrirModalEditarParte(${p.id_parte}, ${p.horas}, '${p.tareas.replace(/'/g, "\\'")}', ${p.id_obra}, '${p.obra_nombre.replace(/'/g, "\\'")}')" class="absolute top-0 right-0 bg-yellow-50 hover:bg-yellow-100 text-[#004b87] px-3 py-1 rounded text-xs font-bold transition">✏️ Editar</button>
                                 <div class="text-sm font-bold flex justify-between pr-20"><span>${p.operario_nombre}</span></div>
                                 <div class="text-xs font-semibold text-[#004b87] bg-yellow-50 p-2 rounded">[${p.codigo_operario || '000'}] ${p.obra_nombre}</div>
                                 <div class="bg-gray-50 p-3 rounded text-xs space-y-1">
@@ -383,25 +512,53 @@
             } catch (e) { console.error(e); }
         }
 
-        async function editarParteAdmin(idParte, horasActuales, tareasActuales, nombreObraActual) {
-            const nuevasHoras = prompt("Modificar horas trabajadas:", horasActuales);
-            if (nuevasHoras === null) return;
+        function abrirModalEditarParte(idParte, horas, tareas, idObraActual, nombreObraActual) {
+            document.getElementById('modalIdParte').value = idParte;
+            document.getElementById('modalHoras').value = horas;
+            document.getElementById('modalTareas').value = tareas;
+            document.getElementById('buscadorObraInput').value = nombreObraActual;
+            document.getElementById('modalIdObraSeleccionada').value = idObraActual;
+            
+            filtrarObrasModal('');
+            document.getElementById('modalEditarParte').classList.remove('hidden');
+        }
 
-            const nuevasTareas = prompt("Modificar descripción de tareas:", tareasActuales);
-            if (nuevasTareas === null) return;
+        function cerrarModalEdicion() {
+            document.getElementById('modalEditarParte').classList.add('hidden');
+        }
 
-            const nombreObraInput = prompt(`Escribe el nombre de la nueva obra:`, nombreObraActual);
-            if (nombreObraInput === null) return;
-
-            let obraEncontrada = listaObrasGlobalAdmin.find(o => o.nombre.toLowerCase().trim() === nombreObraInput.toLowerCase().trim());
-            if (!obraEncontrada) {
-                alert('❌ La obra especificada no existe. Revisa el nombre introducido.');
+        function filtrarObrasModal(query) {
+            const contenedor = document.getElementById('listaObrasResultados');
+            contenedor.innerHTML = '';
+            const filtradas = listaObrasGlobalAdmin.filter(o => o.nombre.toLowerCase().includes(query.toLowerCase())).slice(0, 50);
+            
+            if (filtradas.length === 0) {
+                contenedor.innerHTML = '<div class="p-3 text-xs text-gray-400 text-center">No se encontraron obras.</div>';
                 return;
             }
 
-            const horasLimpias = parseFloat(nuevasHoras.replace(',', '.'));
-            if (isNaN(horasLimpias)) {
-                alert('❌ Formato de horas incorrecto.');
+            filtradas.forEach(o => {
+                contenedor.innerHTML += `
+                    <div onclick="seleccionarObraModal(${o.id_obra}, '${o.nombre.replace(/'/g, "\\'")}')" class="p-2.5 text-xs text-gray-700 hover:bg-yellow-50 hover:text-[#004b87] cursor-pointer font-medium transition">
+                        🏢 ${o.nombre}
+                    </div>`;
+            });
+        }
+
+        function seleccionarObraModal(idObra, nombreObra) {
+            document.getElementById('buscadorObraInput').value = nombreObra;
+            document.getElementById('modalIdObraSeleccionada').value = idObra;
+            document.getElementById('listaObrasResultados').innerHTML = `<div class="p-2.5 text-xs font-bold text-green-700 bg-green-50">✅ Obra seleccionada: ${nombreObra}</div>`;
+        }
+
+        async function guardarEdicionParteModal() {
+            const idParte = document.getElementById('modalIdParte').value;
+            const horas = parseFloat(document.getElementById('modalHoras').value);
+            const tareas = document.getElementById('modalTareas').value;
+            const id_obra = document.getElementById('modalIdObraSeleccionada').value;
+
+            if (isNaN(horas) || !id_obra) {
+                alert('❌ Revisa que las horas sean correctas y hayas seleccionado una obra del buscador.');
                 return;
             }
 
@@ -409,12 +566,13 @@
                 const respuesta = await fetch(`/api/partes/${idParte}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ horas: horasLimpias, tareas: nuevasTareas, id_obra: obraEncontrada.id_obra })
+                    body: JSON.stringify({ horas, tareas, id_obra })
                 });
 
                 const resultado = await respuesta.json();
                 if (resultado.success) {
                     alert('✅ ¡Parte modificado correctamente!');
+                    cerrarModalEdicion();
                     await buscarPartesFiltrados();
                 } else {
                     alert('❌ Error al modificar el parte.');
