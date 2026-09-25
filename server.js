@@ -166,18 +166,24 @@ app.get('/api/admin/partes-filtrados', async (req, res) => {
     const params = [];
     let index = 1;
 
+    // Verificamos estrictamente que id_usuario llegue y sea válido
     if (id_usuario && id_usuario !== '' && id_usuario !== 'undefined' && id_usuario !== 'null') {
-      query += ` AND pt.id_usuario = $${index++}`; params.push(id_usuario);
+      query += ` AND pt.id_usuario = $${index++}`; 
+      params.push(id_usuario);
     }
     if (id_obra && id_obra !== '' && id_obra !== 'undefined' && id_obra !== 'null') {
-      query += ` AND pt.id_obra = $${index++}`; params.push(id_obra);
+      query += ` AND pt.id_obra = $${index++}`; 
+      params.push(id_obra);
     }
     if (fecha_inicio && fecha_fin) {
-      query += ` AND pt.fecha BETWEEN $${index++} AND $${index++}`; params.push(fecha_inicio, fecha_fin);
+      query += ` AND pt.fecha BETWEEN $${index++} AND $${index++}`; 
+      params.push(fecha_inicio, fecha_fin);
     } else if (fecha_inicio) {
-      query += ` AND pt.fecha >= $${index++}`; params.push(fecha_inicio);
+      query += ` AND pt.fecha >= $${index++}`; 
+      params.push(fecha_inicio);
     } else if (fecha_fin) {
-      query += ` AND pt.fecha <= $${index++}`; params.push(fecha_fin);
+      query += ` AND pt.fecha <= $${index++}`; 
+      params.push(fecha_fin);
     }
 
     query += ` ORDER BY pt.fecha DESC, u.nombre ASC;`;
