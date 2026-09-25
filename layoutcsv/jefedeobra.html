@@ -188,9 +188,10 @@
                     let totalHoras = 0;
                     data.partes.forEach(p => {
                         totalHoras += parseFloat(p.horas || 0);
-                        contenedor.innerHTML += `<div class="border rounded-lg p-4 bg-white"><div class="flex justify-between font-bold text-sm"><span>${p.operario_nombre}</span><span class="text-[#004b87]">${p.horas}h</span></div><div class="text-xs text-gray-500 mb-2">${p.obra_nombre} | ${p.fecha_registro}</div><div class="text-xs bg-gray-50 p-2 rounded">${p.tareas}</div></div>`;
+                        const horasLimpias = parseFloat(p.horas || 0).toLocaleString('es-ES', { maximumFractionDigits: 1 });
+                        contenedor.innerHTML += `<div class="border rounded-lg p-4 bg-white"><div class="flex justify-between font-bold text-sm"><span>${p.operario_nombre}</span><span class="text-[#004b87]">${horasLimpias}h</span></div><div class="text-xs text-gray-500 mb-2">${p.obra_nombre} | ${p.fecha_registro}</div><div class="text-xs bg-gray-50 p-2 rounded">${p.tareas}</div></div>`;
                     });
-                    document.getElementById('statHoras').textContent = totalHoras.toFixed(1);
+                    document.getElementById('statHoras').textContent = totalHoras.toLocaleString('es-ES', { maximumFractionDigits: 1 });
                 } else {
                     contenedor.innerHTML = '<div class="p-4 bg-gray-50 text-center text-sm border rounded-lg">No hay partes registrados para esta obra en el rango de fechas seleccionado.</div>';
                     document.getElementById('statHoras').textContent = '0';
@@ -255,7 +256,10 @@
                         d.setDate(d.getDate() + 1);
                     }
                     if (diasLaborables.length === 0) { alert('Rango en fin de semana.'); btn.disabled = false; return; }
-                    const horasPorDia = (totalHoras / diasLaborables.length).toFixed(2);
+                    
+                    // Redondeamos a 1 decimal exacto por día para evitar decimales excesivos
+                    const horasPorDia = Number((totalHoras / diasLaborables.length).toFixed(1));
+                    
                     for (let dia of diasLaborables) {
                         await fetch('/api/partes', { 
                             method: 'POST', headers: { 'Content-Type': 'application/json' }, 
@@ -296,10 +300,12 @@
                         if(!mapObras[p.obra_nombre]) mapObras[p.obra_nombre] = 0;
                         mapObras[p.obra_nombre] += h;
                         
+                        const horasLimpias = Number(p.horas).toLocaleString('es-ES', { maximumFractionDigits: 1 });
+
                         contenedorHistorial.innerHTML += `
                             <div class="flex justify-between items-center bg-gray-50 p-3 border rounded-lg gap-2">
                                 <div class="overflow-hidden">
-                                    <div class="font-bold text-[#004b87] text-sm truncate">${p.obra_nombre} (${p.horas}h)</div>
+                                    <div class="font-bold text-[#004b87] text-sm truncate">${p.obra_nombre} (${horasLimpias}h)</div>
                                     <div class="text-[11px] text-gray-400">${p.fecha_registro} | ${p.tareas}</div>
                                 </div>
                                 <div class="flex items-center gap-1 shrink-0">
@@ -310,9 +316,13 @@
                     });
 
                     for(const [obra, horas] of Object.entries(mapObras)) {
-                        tbody.innerHTML += `<tr class="border-b"><td class="p-3 font-semibold text-[#004b87] text-xs">${obra}</td><td class="p-3 text-center text-sm">${horas}h</td><td class="p-3 text-center font-bold text-sm bg-yellow-50">${((horas / totalMes) * 100).toFixed(1)}%</td></tr>`;
+                        const horasObraRedondeadas = Number(horas.toFixed(1));
+                        const porcentaje = totalMes > 0 ? ((horas / totalMes) * 100).toFixed(1) : 0;
+                        tbody.innerHTML += `<tr class="border-b"><td class="p-3 font-semibold text-[#004b87] text-xs">${obra}</td><td class="p-3 text-center text-sm">${horasObraRedondeadas}h</td><td class="p-3 text-center font-bold text-sm bg-yellow-50">${porcentaje}%</td></tr>`;
                     }
-                    document.getElementById('totalHorasMes').textContent = totalMes + 'h';
+                    
+                    const totalMesRedondeado = Number(totalMes.toFixed(1));
+                    document.getElementById('totalHorasMes').textContent = totalMesRedondeado + 'h';
                 }
             } catch(e) { console.error(e); }
         }
