@@ -796,6 +796,156 @@ app.get('/api/admin/exportar', async (req, res) => {
     res.status(500).json({ success: false, error: 'Error interno en el servidor' });
   }
 });
+
+// ==========================================
+// RUTA: Exportar Excel de Dedicación Mensual de Jefe de Obra (.xlsx)
+// ==========================================
+app.get('/api/admin/exportar-dedicacion-jefe/:id_jefe', async (req, res) => {
+  const { id_jefe } = req.params;
+  const { mes, anio } = req.query;
+
+  const now = new Date();
+  const targetAnio = anio ? parseInt(anio) : now.getFullYear();
+  const targetMes = mes ? parseInt(mes) : now.getMonth() + 1; // 1-12
+
+  const inicioMes = `${targetAnio}-${String(targetMes).padStart(2, '0')}-01`;
+  const ultimoDia = new Date(targetAnio, targetMes, 0).getDate();
+  const finMes = `${targetAnio}-${String(targetMes).padStart(2, '0')}-${ultimoDia}`;
+
+  try {
+    // 1. Obtener nombre del jefe de obra
+    const resJefe = await pool.query('SELECT nombre FROM usuarios WHERE id_usuario = $1', [id_jefe]);
+    if (resJefe.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Jefe de obra no encontrado' });
+    }
+    const nombreJefe = resJefe.rows[0].nombre;
+
+    // 2. Obtener las obras asignadas a este jefe de obra
+    const resObrasJefe = await pool.query(`
+      SELECT o.id_obra, o.nombre 
+      FROM asignacion_obras_jefe ao
+      JOIN obras o ON ao.id_obra = o.id_obra
+      WHERE ao.id_jefe = $1
+      ORDER BY o.nombre ASC;
+    `, [id_jefe]);
+
+    const obrasAsignadas = resObrasJefe.rows;
+
+    if (obrasAsignadas.length === 0) {
+      return res.status(400).send('Este jefe de obra no tiene obras asignadas actualmente.');
+    }
+
+    // 3. Consultar las horas registradas en esas obras durante el mes
+    const resHoras = await pool.query(`
+      SELECT pt.id_obra, SUM(pt.horas) AS total_horas
+      FROM partes_trabajo pt
+      WHERE pt.id_obra = ANY($1::int[])
+        AND pt.fecha BETWEEN $2 AND $3
+      GROUP BY pt.id_obra;
+    `, [obrasAsignadas.map(o => o.id_obra), inicioMes, finMes]);
+
+    const horasPorObra = {};
+    let horasTotalesGlobal = 0;
+    resHoras.rows.forEach(row => {
+      const h = parseFloat(row.total_horas || 0);
+      horasPorObra[row.id_obra] = h;
+      horasTotalesGlobal += h;
+    });
+
+    // 4. Generar el Excel con ExcelJS
+    const ExcelJS = require('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Dedicación Mensual');
+
+    const estiloBordeFino = {
+      top: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+      left: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+      bottom: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+      right: { style: 'thin', color: { argb: 'FFD3D3D3' } }
+    };
+
+    // Título superior
+    sheet.addRow([`DEDICACIÓN MENSUAL DE JEFES DE OBRA - ${nombreJefe.toUpperCase()}`]);
+    sheet.mergeCells('A1:C1');
+    const rTitulo = sheet.getRow(1);
+    rTitulo.font = { bold: true, size: 12, color: { argb: 'FF004B87' } };
+    rTitulo.alignment = { horizontal: 'center', vertical: 'middle' };
+    sheet.addRow([]); // Fila vacía
+
+    // Cabecera de la tabla
+    const rCabecera = sheet.addRow(['Obra', 'Horas empleadas', 'Porcentaje']);
+    rCabecera.font = { bold: true, color: { argb: 'FF000000' } };
+    rCabecera.eachCell(cell => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
+      cell.border = estiloBordeFino;
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    });
+
+    // Filas de Obras
+    obrasAsignadas.forEach(obra => {
+      const horasObra = horasPorObra[obra.id_obra] || 0;
+      const porcentaje = horasTotalesGlobal > 0 ? (horasObra / horasTotalesGlobal) : 0;
+
+      const fila = sheet.addRow([obra.nombre, horasObra, porcentaje]);
+      
+      // Formato celda Obra
+      fila.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+      fila.getCell(1).border = estiloBordeFino;
+
+      // Formato celda Horas (Numérico real)
+      const cellHoras = fila.getCell(2);
+      cellHoras.value = horasObra;
+      cellHoras.numFmt = '#,##0.0';
+      cellHoras.alignment = { horizontal: 'right', vertical: 'middle' };
+      cellHoras.border = estiloBordeFino;
+
+      // Formato celda Porcentaje (Numérico real con formato porcentaje)
+      const cellPorc = fila.getCell(3);
+      cellPorc.value = porcentaje;
+      cellPorc.numFmt = '0.0%';
+      cellPorc.alignment = { horizontal: 'right', vertical: 'middle' };
+      cellPorc.border = estiloBordeFino;
+    });
+
+    // Fila Total
+    const filaTotal = sheet.addRow(['Total', horasTotalesGlobal, horasTotalesGlobal > 0 ? 1 : 0]);
+    filaTotal.font = { bold: true, color: { argb: 'FF004B87' } };
+    filaTotal.eachCell((cell, colNumber) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9EDF7' } };
+      cell.border = estiloBordeFino;
+      if (colNumber === 1) cell.alignment = { horizontal: 'left', vertical: 'middle' };
+      if (colNumber === 2) {
+        cell.value = horasTotalesGlobal;
+        cell.numFmt = '#,##0.0';
+        cell.alignment = { horizontal: 'right', vertical: 'middle' };
+      }
+      if (colNumber === 3) {
+        cell.value = horasTotalesGlobal > 0 ? 1 : 0;
+        cell.numFmt = '0.0%';
+        cell.alignment = { horizontal: 'right', vertical: 'middle' };
+      }
+    });
+
+    // Ajustar anchos de columna
+    sheet.columns = [
+      { width: 45 }, // Obra
+      { width: 22 }, // Horas
+      { width: 22 }  // Porcentaje
+    ];
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=dedicacion_${nombreJefe.replace(/\s+/g, '_')}.xlsx`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+
+  } catch (error) {
+    console.error('Error al exportar dedicación de jefe de obra:', error);
+    res.status(500).json({ success: false, error: 'Error interno en el servidor' });
+  }
+});
+
+
 // ==========================================
 // ENCENDIDO DEL SERVIDOR
 // ==========================================
