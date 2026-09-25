@@ -356,11 +356,21 @@
 
                 <!-- 7. VISTA: DEDICACIÓN MENSUAL DE JEFES DE OBRA -->
                 <section id="seccion-dedicacion" class="vista-panel hidden space-y-6">
-                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 max-w-xl">
                         <h2 class="text-lg font-bold text-[#004b87] mb-2">Dedicación Mensual de Jefes de Obra</h2>
-                        <p class="text-xs text-gray-600 mb-4">Resumen de supervisión y horas acumuladas por obra durante el mes actual.</p>
-                        <div class="p-6 bg-yellow-50 border border-yellow-200 rounded-lg text-center text-sm text-[#004b87] font-semibold">
-                            📊 Módulo preparado para control de dedicación ejecutiva y asignaciones de obra.
+                        <p class="text-xs text-gray-600 mb-5">Selecciona el Jefe de Obra para descargar el informe detallado con las obras asignadas, horas empleadas y porcentajes de dedicación del mes actual.</p>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Seleccionar Jefe de Obra</label>
+                                <select id="selectJefeDedicacion" class="w-full border border-gray-300 p-2.5 rounded-lg bg-gray-50 text-sm outline-none font-semibold">
+                                    <option value="">-- Cargando jefes de obra --</option>
+                                </select>
+                            </div>
+
+                            <button onclick="descargarDedicacionJefe()" class="w-full bg-[#004b87] text-white font-bold text-sm py-3 rounded-lg shadow hover:bg-blue-900 transition flex items-center justify-center gap-2">
+                                📥 Descargar Excel de Dedicación
+                            </button>
                         </div>
                     </div>
                 </section>
@@ -479,6 +489,7 @@
             if (nombreVista === 'obras') cargarObrasAdmin();
             if (nombreVista === 'usuarios') cargarUsuariosAdmin();
             if (nombreVista === 'asignaciones') cargarDatosAsignaciones();
+            if (nombreVista === 'dedicacion') cargarJefesDedicacion();
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1049,6 +1060,31 @@
                 if(!inicio || !fin) { alert('Selecciona un rango de fechas válido.'); return; }
             }
             window.location.href = `/api/admin/exportar?inicio=${inicio}&fin=${fin}`;
+        }
+
+        async function cargarJefesDedicacion() {
+            try {
+                const res = await fetch('/api/admin/usuarios-todos');
+                const data = await res.json();
+                if (data.success) {
+                    const select = document.getElementById('selectJefeDedicacion');
+                    select.innerHTML = '<option value="">-- Selecciona un Jefe de Obra --</option>';
+                    data.usuarios.forEach(u => {
+                        if (u.rol === 'jefe_de_obra' || u.rol === 'jefedeobra' || u.rol === 'admin') {
+                            select.innerHTML += `<option value="${u.id_usuario}">${u.nombre} (${u.rol.toUpperCase()})</option>`;
+                        }
+                    });
+                }
+            } catch(e) { console.error("Error cargando jefes para dedicación:", e); }
+        }
+
+        function descargarDedicacionJefe() {
+            const idJefe = document.getElementById('selectJefeDedicacion').value;
+            if (!idJefe) {
+                alert('⚠️ Por favor, selecciona un Jefe de Obra.');
+                return;
+            }
+            window.location.href = `/api/admin/exportar-dedicacion-jefe/${idJefe}`;
         }
     </script>
 </body>
