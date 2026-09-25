@@ -20,9 +20,7 @@
             }
             body * { visibility: hidden; }
             
-            /* Si el panel de resultados está visible, imprimimos el listado completo */
-            #panelResultados:not(.hidden), #panelResultados:not(.hidden) * ,
-            /* O si la plantilla individual está visible */
+            #panelResultados:not(.hidden), #panelResultados:not(.hidden) *, 
             #plantillaParteIndividual:not(.hidden), #plantillaParteIndividual:not(.hidden) * { 
                 visibility: visible; 
             }
@@ -257,6 +255,7 @@
         const nombresSecciones = { 'consulta': 'Consulta de Obras', 'partes': 'Mis Partes (Dedicación)' };
         let editandoIdParte = null;
         let listaObrasJefeGlobal = [];
+        let partesConsultaGlobal = [];
 
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('-translate-x-full'); document.getElementById('sidebar-backdrop').classList.toggle('hidden'); }
 
@@ -348,8 +347,9 @@
                 contenedor.innerHTML = '';
                 
                 if (data.success && data.partes.length > 0) {
+                    partesConsultaGlobal = data.partes;
                     let totalHoras = 0;
-                    data.partes.forEach(p => {
+                    data.partes.forEach((p, index) => {
                         totalHoras += parseFloat(p.horas || 0);
                         const horasLimpias = parseFloat(p.horas || 0).toLocaleString('es-ES', { maximumFractionDigits: 1 });
                         const fechaParte = p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : 'N/A';
@@ -364,13 +364,14 @@
                                     <div class="text-xs text-gray-500 mb-1">${p.obra_nombre} | Fecha: ${fechaParte}</div>
                                     <div class="text-xs bg-gray-50 p-2 rounded text-gray-700">${p.tareas}</div>
                                 </div>
-                                <button onclick="descargarParteIndividual('${p.operario_nombre}', '${p.obra_nombre}', '${fechaParte}', '${horasLimpias}', '${(p.tareas || '').replace(/'/g, "\\'")}')" class="bg-yellow-50 hover:bg-yellow-100 text-[#004b87] border border-yellow-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shrink-0 no-print">
+                                <button onclick="descargarParteIndex(${index})" class="bg-yellow-50 hover:bg-yellow-100 text-[#004b87] border border-yellow-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shrink-0 no-print">
                                     <span>📄</span> Descargar PDF
                                 </button>
                             </div>`;
                     });
                     document.getElementById('statHoras').textContent = totalHoras.toLocaleString('es-ES', { maximumFractionDigits: 1 });
                 } else {
+                    partesConsultaGlobal = [];
                     contenedor.innerHTML = '<div class="p-4 bg-gray-50 text-center text-sm border rounded-lg">No hay partes registrados para esta obra en el rango de fechas seleccionado.</div>';
                     document.getElementById('statHoras').textContent = '0';
                 }
@@ -383,35 +384,37 @@
                 alert('⚠️ Primero debes realizar una consulta válida con resultados.');
                 return;
             }
-            // Aseguramos que la plantilla individual esté oculta para imprimir todo el listado
             document.getElementById('plantillaParteIndividual').classList.add('hidden');
-            panel.classList.remove('hidden');
             window.print();
         }
 
-        function descargarParteIndividual(operario, obra, fecha, horas, tareas) {
+        function descargarParteIndex(index) {
+            const p = partesConsultaGlobal[index];
+            if (!p) return;
+
             const nombreJefe = localStorage.getItem('usuario_nombre') || 'Jefe de Obra';
-            
-            // Ocultamos el panel de resultados general para que no interfiera
+            const fechaParte = p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : 'N/A';
+            const horasLimpias = parseFloat(p.horas || 0).toLocaleString('es-ES', { maximumFractionDigits: 1 });
+
+            // Ocultamos el panel general
             document.getElementById('panelResultados').classList.add('hidden');
 
-            // Rellenamos la plantilla oculta con los datos de este parte concreto
+            // Rellenamos la plantilla individual
             document.getElementById('indJefeNombre').textContent = nombreJefe;
             document.getElementById('indFechaEmision').textContent = new Date().toLocaleDateString('es-ES');
-            document.getElementById('indOperario').textContent = operario;
-            document.getElementById('indObra').textContent = obra;
-            document.getElementById('indFecha').textContent = fecha;
-            document.getElementById('indHoras').textContent = horas;
-            document.getElementById('indTareas').textContent = tareas;
+            document.getElementById('indOperario').textContent = p.operario_nombre;
+            document.getElementById('indObra').textContent = p.obra_nombre;
+            document.getElementById('indFecha').textContent = fechaParte;
+            document.getElementById('indHoras').textContent = horasLimpias;
+            document.getElementById('indTareas').textContent = p.tareas;
 
-            // Mostramos la plantilla para la impresión
             const plantilla = document.getElementById('plantillaParteIndividual');
             plantilla.classList.remove('hidden');
 
             window.print();
 
-            // Ocultamos de nuevo la plantilla tras imprimir
             plantilla.classList.add('hidden');
+            document.getElementById('panelResultados').classList.remove('hidden');
         }
 
         function iniciarEdicion(id_parte, id_obra, nombreObra, fecha, horas, tareas) {
