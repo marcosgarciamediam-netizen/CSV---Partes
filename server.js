@@ -996,6 +996,30 @@ app.delete('/api/partes/:id_parte', async (req, res) => {
 
 
 // ==========================================
+// RUTA: Obtener total de horas de un jefe de obra en un rango exacto
+// ==========================================
+app.get('/api/admin/jefe-total-horas/:id_usuario', async (req, res) => {
+  const { id_usuario } = req.params;
+  const { fecha_inicio, fecha_fin } = req.query;
+
+  try {
+    const query = `
+      SELECT SUM(horas) AS total_horas
+      FROM partes_trabajo
+      WHERE id_usuario = $1 AND fecha BETWEEN $2 AND $3;
+    `;
+    const resultado = await pool.query(query, [id_usuario, fecha_inicio, fecha_fin]);
+    const total = resultado.rows[0].total_horas ? parseFloat(resultado.rows[0].total_horas) : 0;
+
+    res.json({ success: true, total_horas: total });
+  } catch (error) {
+    console.error('Error al calcular total de horas del jefe:', error);
+    res.status(500).json({ success: false, error: 'Error interno en el servidor' });
+  }
+});
+
+
+// ==========================================
 // ENCENDIDO DEL SERVIDOR
 // ==========================================
 app.listen(PORT, () => {
