@@ -37,47 +37,52 @@
                 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     
-                    <!-- Columna Izquierda: Registrar parte para un operario de la plantilla -->
-                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 lg:col-span-1 space-y-4">
-                        <h2 class="text-lg font-bold text-[#004b87]">Registrar Parte de Cuadrilla</h2>
-                        <p class="text-xs text-gray-600">Selecciona un trabajador de tu plantilla para imputarle horas.</p>
+                    <!-- Columna Izquierda: Registrar parte para un operario de la plantilla con diseño elegante -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 lg:col-span-1 overflow-hidden flex flex-col">
+                        <div class="bg-[#004b87] text-white p-4">
+                            <h2 class="font-bold text-base flex items-center gap-2"><span>📝</span> Registrar Parte de Cuadrilla</h2>
+                            <p class="text-[11px] text-yellow-300 mt-0.5">Selecciona un trabajador y asigna la obra de forma rápida.</p>
+                        </div>
                         
-                        <form id="formParteEncargado" onsubmit="enviarParteEncargado(event)" class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Trabajador</label>
-                                <select id="selectOperario" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50">
-                                    <option value="">Cargando plantilla...</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Obra</label>
-                                <select id="selectObra" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50">
-                                    <option value="">Cargando obras...</option>
-                                </select>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-3">
+                        <form id="formParteEncargado" onsubmit="enviarParteEncargado(event)" class="p-6 space-y-4 flex-1 flex flex-col justify-between">
+                            <div class="space-y-4">
                                 <div>
-                                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Fecha</label>
-                                    <input type="date" id="inputFecha" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50" />
+                                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Trabajador</label>
+                                    <select id="selectOperario" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 outline-none font-semibold">
+                                        <option value="">Cargando plantilla...</option>
+                                    </select>
                                 </div>
+
                                 <div>
-                                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Horas</label>
-                                    <input type="number" id="inputHoras" step="0.5" min="0.5" max="24" value="8" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50" />
+                                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Buscar Obra (Escribe para filtrar)</label>
+                                    <input type="text" id="buscadorObraRegistroInput" oninput="filtrarObrasRegistro(this.value)" placeholder="Escribe el nombre de la obra..." class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 mb-2 font-semibold outline-none" autocomplete="off" />
+                                    <div id="listaObrasRegistroResultados" class="border rounded-xl max-h-40 overflow-y-auto bg-white divide-y divide-gray-100 shadow-inner"></div>
+                                    <input type="hidden" id="selectObraRegistro" required />
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Fecha</label>
+                                        <input type="date" id="inputFecha" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Horas</label>
+                                        <input type="number" id="inputHoras" step="0.5" min="0.5" max="24" value="8" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 outline-none font-bold" />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Tareas / Detalles</label>
+                                    <textarea id="inputTareas" rows="2" required placeholder="Descripción de las labores..." class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 outline-none"></textarea>
                                 </div>
                             </div>
 
                             <div>
-                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Tareas / Detalles</label>
-                                <textarea id="inputTareas" rows="2" required placeholder="Descripción de las labores..." class="w-full border p-2.5 rounded-xl text-sm bg-gray-50"></textarea>
+                                <div id="mensajeFeedback" class="hidden p-2 text-xs font-semibold rounded text-center mb-2"></div>
+                                <button type="submit" id="btnEnviar" class="w-full bg-[#ffcc00] text-[#004b87] font-extrabold text-sm py-3 rounded-xl shadow-md hover:bg-yellow-400 transition">
+                                    🚀 Registrar Parte
+                                </button>
                             </div>
-
-                            <div id="mensajeFeedback" class="hidden p-2 text-xs font-semibold rounded text-center"></div>
-
-                            <button type="submit" id="btnEnviar" class="w-full bg-[#ffcc00] text-[#004b87] font-extrabold text-sm py-3 rounded-xl shadow-md hover:bg-yellow-400 transition">
-                                🚀 Registrar Parte
-                            </button>
                         </form>
                     </div>
 
@@ -117,17 +122,17 @@
                 
                 <div>
                     <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Horas Trabajadas</label>
-                    <input type="number" id="modalHoras" step="0.5" min="0.5" max="24" class="w-full border p-2.5 rounded-xl text-sm bg-gray-50" />
+                    <input type="number" id="modalHoras" step="0.5" min="0.5" max="24" class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 outline-none font-bold" />
                 </div>
 
                 <div>
                     <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Descripción de Tareas</label>
-                    <textarea id="modalTareas" rows="3" class="w-full border p-2.5 rounded-xl text-sm bg-gray-50"></textarea>
+                    <textarea id="modalTareas" rows="3" class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 outline-none"></textarea>
                 </div>
 
                 <div>
                     <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Buscar Obra (Escribe para filtrar)</label>
-                    <input type="text" id="buscadorObraInput" oninput="filtrarObrasModal(this.value)" placeholder="Escribe el nombre de la obra..." class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 mb-2 font-semibold" autocomplete="off" />
+                    <input type="text" id="buscadorObraInput" oninput="filtrarObrasModal(this.value)" placeholder="Escribe el nombre de la obra..." class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 mb-2 font-semibold outline-none" autocomplete="off" />
                     <div id="listaObrasResultados" class="border rounded-xl max-h-48 overflow-y-auto bg-white divide-y divide-gray-100 shadow-inner"></div>
                     <input type="hidden" id="modalIdObraSeleccionada" />
                 </div>
@@ -176,15 +181,32 @@
                 
                 if (dataObras.success) {
                     listaObrasGlobal = dataObras.obras;
-                    const selectObra = document.getElementById('selectObra');
-                    selectObra.innerHTML = '<option value="">-- Selecciona obra --</option>';
-                    listaObrasGlobal.forEach(o => {
-                        selectObra.innerHTML += `<option value="${o.id_obra}">${o.nombre}</option>`;
-                    });
+                    filtrarObrasRegistro(''); // Inicializar el buscador de obras del registro vacío
                 }
             } catch (error) {
                 console.error("Error al cargar datos del encargado:", error);
             }
+        }
+
+        function filtrarObrasRegistro(query) {
+            const contenedor = document.getElementById('listaObrasRegistroResultados');
+            contenedor.innerHTML = '';
+            const filtradas = listaObrasGlobal.filter(o => o.nombre.toLowerCase().includes(query.toLowerCase())).slice(0, 50);
+            
+            if (filtradas.length === 0) {
+                contenedor.innerHTML = '<div class="p-3 text-xs text-gray-400 text-center">No se encontraron obras.</div>';
+                return;
+            }
+
+            filtradas.forEach(o => {
+                contenedor.innerHTML += `<div onclick="seleccionarObraRegistro(${o.id_obra}, '${o.nombre.replace(/'/g, "\\'")}')" class="p-2.5 text-xs text-gray-700 hover:bg-yellow-50 hover:text-[#004b87] cursor-pointer font-medium transition">🏢 ${o.nombre}</div>`;
+            });
+        }
+
+        function seleccionarObraRegistro(idObra, nombreObra) {
+            document.getElementById('buscadorObraRegistroInput').value = nombreObra;
+            document.getElementById('selectObraRegistro').value = idObra;
+            document.getElementById('listaObrasRegistroResultados').innerHTML = `<div class="p-2.5 text-xs font-bold text-green-700 bg-green-50">✅ Obra seleccionada: ${nombreObra}</div>`;
         }
 
         async function cargarPartesCuadrilla(idEncargado) {
@@ -366,10 +388,22 @@
             const btn = document.getElementById('btnEnviar');
             const feedback = document.getElementById('mensajeFeedback');
             const idEncargado = localStorage.getItem('usuario_id');
+            let id_obra = document.getElementById('selectObraRegistro').value;
+
+            if (!id_obra) {
+                const textoEscrito = document.getElementById('buscadorObraRegistroInput').value.trim();
+                const obraEncontrada = listaObrasGlobal.find(o => o.nombre.toLowerCase().trim() === textoEscrito.toLowerCase());
+                if (obraEncontrada) { id_obra = obraEncontrada.id_obra; }
+            }
+
+            if (!id_obra) {
+                alert('⚠️ Por favor, selecciona una obra válida haciendo clic en los resultados de la búsqueda.');
+                return;
+            }
 
             const payload = {
                 id_usuario: document.getElementById('selectOperario').value,
-                id_obra: document.getElementById('selectObra').value,
+                id_obra: parseInt(id_obra),
                 fecha: document.getElementById('inputFecha').value,
                 horas: document.getElementById('inputHoras').value,
                 tareas: document.getElementById('inputTareas').value
@@ -391,6 +425,9 @@
                     feedback.textContent = '✅ Parte registrado con éxito';
                     feedback.className = 'p-2 text-xs font-semibold rounded text-center bg-green-50 text-green-700 block mb-2';
                     document.getElementById('inputTareas').value = '';
+                    document.getElementById('buscadorObraRegistroInput').value = '';
+                    document.getElementById('selectObraRegistro').value = '';
+                    filtrarObrasRegistro('');
                     await cargarPartesCuadrilla(idEncargado); 
                 } else {
                     feedback.textContent = '❌ Error: ' + (data.error || 'No se pudo guardar');
