@@ -257,7 +257,6 @@
                     }
                     if (diasLaborables.length === 0) { alert('Rango en fin de semana.'); btn.disabled = false; return; }
                     
-                    // Redondeamos a 1 decimal exacto por día para evitar decimales excesivos
                     const horasPorDia = Number((totalHoras / diasLaborables.length).toFixed(1));
                     
                     for (let dia of diasLaborables) {
