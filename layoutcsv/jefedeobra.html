@@ -20,11 +20,14 @@
             }
             body * { visibility: hidden; }
             
-            #plantillaParteIndividual, #plantillaParteIndividual * { 
+            /* Si el panel de resultados está visible, imprimimos el listado completo */
+            #panelResultados:not(.hidden), #panelResultados:not(.hidden) * ,
+            /* O si la plantilla individual está visible */
+            #plantillaParteIndividual:not(.hidden), #plantillaParteIndividual:not(.hidden) * { 
                 visibility: visible; 
             }
             
-            #plantillaParteIndividual { 
+            #panelResultados:not(.hidden), #plantillaParteIndividual:not(.hidden) { 
                 position: absolute !important; 
                 left: 0 !important; 
                 top: 0 !important; 
@@ -380,13 +383,16 @@
                 alert('⚠️ Primero debes realizar una consulta válida con resultados.');
                 return;
             }
+            // Aseguramos que la plantilla individual esté oculta para imprimir todo el listado
+            document.getElementById('plantillaParteIndividual').classList.add('hidden');
+            panel.classList.remove('hidden');
             window.print();
         }
 
         function descargarParteIndividual(operario, obra, fecha, horas, tareas) {
             const nombreJefe = localStorage.getItem('usuario_nombre') || 'Jefe de Obra';
             
-            // Ocultamos el panel de resultados general para que no se filtre en la impresión
+            // Ocultamos el panel de resultados general para que no interfiera
             document.getElementById('panelResultados').classList.add('hidden');
 
             // Rellenamos la plantilla oculta con los datos de este parte concreto
