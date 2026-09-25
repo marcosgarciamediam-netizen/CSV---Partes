@@ -238,7 +238,6 @@
                             </button>
                         </form>
 
-                        <!-- Filtros de Búsqueda Rápida para la Lista de Usuarios -->
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
                             <div>
                                 <label class="block text-[10px] font-bold text-[#004b87] uppercase mb-1">🔍 Filtrar por Nombre</label>
@@ -263,7 +262,6 @@
                 <!-- 5. VISTA: ASIGNACIONES -->
                 <section id="seccion-asignaciones" class="vista-panel hidden space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Asignar Operarios a Encargados -->
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
                             <h2 class="text-lg font-bold text-[#004b87]">Asignar Operario a Encargado</h2>
                             <form onsubmit="asignarOperarioEncargado(event)" class="space-y-3">
@@ -291,7 +289,6 @@
                             </div>
                         </div>
 
-                        <!-- Asignar Obras a Jefes -->
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
                             <h2 class="text-lg font-bold text-[#004b87]">Asignar Obra a Jefe de Obra</h2>
                             <form onsubmit="asignarObraJefe(event)" class="space-y-3">
@@ -325,7 +322,7 @@
                 <section id="seccion-quincena" class="vista-panel hidden space-y-6">
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 max-w-xl">
                         <h2 class="text-lg font-bold text-[#004b87] mb-2">Centro de Exportación Quincenal</h2>
-                        <p class="text-xs text-gray-600 mb-5">Selecciona el periodo para descargar el informe en Excel con colores automáticos (Vacaciones: Rosa, Baja: Verde, Permiso: Azul).</p>
+                        <p class="text-xs text-gray-600 mb-5">Selecciona el periodo para descargar el informe en formato matricial con colores y fines de semana en rojo.</p>
                         
                         <div class="space-y-4">
                             <div>
@@ -351,7 +348,7 @@
                             </div>
 
                             <button onclick="descargarInforme()" class="w-full bg-[#004b87] text-white font-bold text-sm py-3 rounded-lg shadow hover:bg-blue-900 transition flex items-center justify-center gap-2">
-                                📥 Descargar Informe en Excel (Con Colores)
+                                📥 Descargar Matriz Quincenal en Excel
                             </button>
                         </div>
                     </div>
@@ -372,7 +369,7 @@
         </div>
     </div>
 
-    <!-- ================= MODALES (Buscador Obras + Corrección Fecha) ================= -->
+    <!-- ================= MODALES ================= -->
     <div id="modalEditarParte" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="bg-[#004b87] text-white p-4 flex justify-between items-center">
@@ -536,8 +533,6 @@
             } catch(e) { console.error(e); }
         }
 
-        // ---------- CONTROL DE MODALES DE OBRAS Y EDICIÓN ----------
-
         function abrirModalAccionOperario(idUsuario, fecha, nombreOperario, selectElement) {
             const accion = selectElement.value; selectElement.value = "";
             document.getElementById('rapidoIdUsuario').value = idUsuario;
@@ -639,7 +634,7 @@
             document.getElementById('modalTareas').value = tareas;
             document.getElementById('buscadorObraInput').value = nombreObraActual;
             document.getElementById('modalIdObraSeleccionada').value = idObraActual;
-            window.fechaParteActual = fechaActual; // SOLUCION AL ERROR 500
+            window.fechaParteActual = fechaActual;
             
             filtrarObrasModal('');
             document.getElementById('modalEditarParte').classList.remove('hidden');
@@ -683,7 +678,6 @@
                 alert('❌ Revisa que las horas sean correctas y hayas seleccionado una obra válida de la lista.'); return;
             }
 
-            // AQUI SE ENVIA LA FECHA PARA QUE EL SERVIDOR NO DE ERROR 500
             const payload = { 
                 horas: horas, 
                 tareas: tareas, 
@@ -711,8 +705,6 @@
             }
         }
 
-
-        // ---------- CONSULTAS DE PARTES ----------
         async function cargarFiltrosPartes() {
             try {
                 const resOps = await fetch('/api/admin/operarios');
@@ -816,7 +808,6 @@
             buscarPartesFiltrados();
         }
 
-        // ---------- OBRAS Y USUARIOS (RESTAURADO COMPLETO) ----------
         async function cargarObrasAdmin() {
             try {
                 const res = await fetch('/api/admin/obras-todas');
@@ -949,7 +940,6 @@
             try { await fetch(`/api/admin/usuarios/${idUsuario}/estado`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo: nuevoEstado }) }); cargarUsuariosAdmin(); } catch(err) { console.error(err); }
         }
 
-        // ================= GESTIÓN DE ASIGNACIONES (PLANTILLAS Y OBRAS RESTAURADO) =================
         async function cargarDatosAsignaciones() {
             try {
                 const resUsers = await fetch('/api/admin/usuarios-todos');
@@ -1034,7 +1024,6 @@
             try { await fetch(`/api/admin/asignaciones-obras/${idAsignacion}`, { method: 'DELETE' }); cargarListasAsignacionesGuardadas(); } catch (err) { console.error(err); }
         }
 
-        // ---------- QUINCENA EXCEL ----------
         function cambiarPeriodo() {
             const val = document.getElementById('selectorPeriodo').value;
             const bloque = document.getElementById('bloquePersonalizado');
