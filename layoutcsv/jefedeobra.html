@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @media print {
-            /* Configuración de página para ocultar URL y cabeceras del navegador */
             @page {
                 size: auto;
                 margin: 20mm 15mm 25mm 15mm;
@@ -21,14 +20,11 @@
             }
             body * { visibility: hidden; }
             
-            /* Si se imprime el listado completo */
-            #panelResultados, #panelResultados *, 
-            /* Si se imprime un parte individual */
             #plantillaParteIndividual, #plantillaParteIndividual * { 
                 visibility: visible; 
             }
             
-            #panelResultados, #plantillaParteIndividual { 
+            #plantillaParteIndividual { 
                 position: absolute !important; 
                 left: 0 !important; 
                 top: 0 !important; 
@@ -43,7 +39,6 @@
             }
             .no-print { display: none !important; }
 
-            /* Pie de página personalizado para impresión */
             .print-footer {
                 position: fixed;
                 bottom: 0;
@@ -128,7 +123,6 @@
                     </div>
                     
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hidden" id="panelResultados">
-                        <!-- Cabecera exclusiva para impresión del listado completo -->
                         <div class="hidden print:block border-b-2 border-gray-800 pb-4 mb-6">
                             <div class="flex justify-between items-center">
                                 <div class="flex items-center gap-3">
@@ -148,7 +142,6 @@
                         <div class="flex justify-between items-center mb-4 border-b pb-2 no-print"><h3 class="text-md font-bold text-[#004b87]">Desglose de Partes</h3><div class="text-sm font-bold bg-yellow-100 text-yellow-800 px-3 py-1 rounded">Total: <span id="statHoras">0</span>h</div></div>
                         <div id="listaPartes" class="space-y-3"></div>
 
-                        <!-- Pie de página fijo para el informe completo -->
                         <div class="print-footer hidden print:flex">
                             <div>CSV Construcción S.L. - Documento Oficial</div>
                             <div class="flex items-center gap-2 font-black text-[#004b87]">CSV</div>
@@ -393,6 +386,9 @@
         function descargarParteIndividual(operario, obra, fecha, horas, tareas) {
             const nombreJefe = localStorage.getItem('usuario_nombre') || 'Jefe de Obra';
             
+            // Ocultamos el panel de resultados general para que no se filtre en la impresión
+            document.getElementById('panelResultados').classList.add('hidden');
+
             // Rellenamos la plantilla oculta con los datos de este parte concreto
             document.getElementById('indJefeNombre').textContent = nombreJefe;
             document.getElementById('indFechaEmision').textContent = new Date().toLocaleDateString('es-ES');
@@ -402,13 +398,13 @@
             document.getElementById('indHoras').textContent = horas;
             document.getElementById('indTareas').textContent = tareas;
 
-            // Mostramos temporalmente la plantilla para la impresión
+            // Mostramos la plantilla para la impresión
             const plantilla = document.getElementById('plantillaParteIndividual');
             plantilla.classList.remove('hidden');
 
             window.print();
 
-            // Volvemos a ocultarla tras imprimir
+            // Ocultamos de nuevo la plantilla tras imprimir
             plantilla.classList.add('hidden');
         }
 
