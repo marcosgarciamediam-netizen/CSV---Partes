@@ -1103,23 +1103,23 @@
                     return;
                 }
 
-                let mapaHorasJefes = {};
-                try {
-                    const resResumen = await fetch(`/api/admin/resumen-jefes-dedicacion?inicio=${defaultInicio}&fin=${defaultFin}`);
-                    const dataResumen = await resResumen.json();
-                    if (dataResumen && dataResumen.success && dataResumen.resumen) {
-                        dataResumen.resumen.forEach(r => { mapaHorasJefes[r.id_usuario] = r.total_horas; });
-                    }
-                } catch (errRes) {
-                    console.warn("No se pudo cargar el resumen de horas:", errRes);
-                }
-
-                const horasObjetivoMes = 160; // Meta mensual de referencia para la barra de progreso
+                const horasObjetivoMes = 160; 
                 contenedor.innerHTML = '';
 
                 for (const jefe of jefes) {
-                    const horasSupervisadas = parseFloat(mapaHorasJefes[jefe.id_usuario] || 0);
-                    // Cálculo del porcentaje basado en las horas reales sobre el objetivo mensual (160h)
+                    let horasSupervisadas = 0;
+                    try {
+                        const resPartes = await fetch(`/api/admin/partes-filtrados?id_usuario=${jefe.id_usuario}&fecha_inicio=${defaultInicio}&fecha_fin=${defaultFin}`);
+                        const dataPartes = await resPartes.json();
+                        if (dataPartes.success && dataPartes.partes) {
+                            dataPartes.partes.forEach(p => {
+                                horasSupervisadas += parseFloat(p.horas || 0);
+                            });
+                        }
+                    } catch (errP) {
+                        console.warn(`No se pudieron cargar los partes para el jefe ${jefe.id_usuario}:`, errP);
+                    }
+
                     const porcentajeProgreso = Math.min(Math.round((horasSupervisadas / horasObjetivoMes) * 100), 100);
                     
                     let colorBarra = 'bg-blue-600';
@@ -1152,7 +1152,6 @@
                             </div>
                         </div>
 
-                        <!-- Calendario y Botón de Descarga Individual -->
                         <div class="pt-4 border-t border-gray-100 space-y-3">
                             <div class="grid grid-cols-2 gap-2 bg-yellow-50 p-2 rounded-lg border border-yellow-200">
                                 <div>
