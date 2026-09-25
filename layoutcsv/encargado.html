@@ -104,6 +104,41 @@
         </div>
     </div>
 
+    <!-- ================= MODAL FLOTANTE PARA EDITAR PARTE ================= -->
+    <div id="modalEditarParte" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-[#004b87] text-white p-4 flex justify-between items-center">
+                <h3 class="font-bold text-base">✏️ Modificar Parte de Trabajo</h3>
+                <button onclick="cerrarModalEdicion()" class="text-white font-bold text-lg px-2 hover:bg-blue-900 rounded">✕</button>
+            </div>
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                <input type="hidden" id="modalIdParte" />
+                <input type="hidden" id="modalFechaParte" />
+                
+                <div>
+                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Horas Trabajadas</label>
+                    <input type="number" id="modalHoras" step="0.5" min="0.5" max="24" class="w-full border p-2.5 rounded-xl text-sm bg-gray-50" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Descripción de Tareas</label>
+                    <textarea id="modalTareas" rows="3" class="w-full border p-2.5 rounded-xl text-sm bg-gray-50"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Buscar Obra (Escribe para filtrar)</label>
+                    <input type="text" id="buscadorObraInput" oninput="filtrarObrasModal(this.value)" placeholder="Escribe el nombre de la obra..." class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 mb-2 font-semibold" autocomplete="off" />
+                    <div id="listaObrasResultados" class="border rounded-xl max-h-48 overflow-y-auto bg-white divide-y divide-gray-100 shadow-inner"></div>
+                    <input type="hidden" id="modalIdObraSeleccionada" />
+                </div>
+            </div>
+            <div class="bg-gray-50 px-6 py-4 border-t flex justify-end gap-3">
+                <button onclick="cerrarModalEdicion()" class="px-4 py-2 bg-gray-200 text-gray-700 font-bold text-xs rounded-xl hover:bg-gray-300 transition">Cancelar</button>
+                <button onclick="guardarEdicionParteModal()" class="px-5 py-2 bg-[#ffcc00] text-[#004b87] font-extrabold text-xs rounded-xl shadow hover:bg-yellow-400 transition">💾 Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let partesGlobal = [];
         let listaObrasGlobal = [];
@@ -138,11 +173,11 @@
 
                 const resObras = await fetch('/api/obras');
                 const dataObras = await resObras.json();
-                const selectObra = document.getElementById('selectObra');
-                selectObra.innerHTML = '<option value="">-- Selecciona obra --</option>';
                 
                 if (dataObras.success) {
                     listaObrasGlobal = dataObras.obras;
+                    const selectObra = document.getElementById('selectObra');
+                    selectObra.innerHTML = '<option value="">-- Selecciona obra --</option>';
                     listaObrasGlobal.forEach(o => {
                         selectObra.innerHTML += `<option value="${o.id_obra}">${o.nombre}</option>`;
                     });
@@ -190,6 +225,10 @@
 
             partesPagina.forEach(p => {
                 const fechaFormateada = new Date(p.fecha).toLocaleDateString('es-ES');
+                const fechaLimpia = p.fecha ? p.fecha.split('T')[0] : new Date().toISOString().split('T')[0];
+                const nombreObraSeguro = (p.obra_nombre || '').replace(/'/g, "\\'");
+                const tareasSeguras = (p.tareas || '').replace(/'/g, "\\'");
+
                 contenedor.innerHTML += `
                     <div class="border border-gray-200 rounded-lg p-4 bg-white hover:shadow-sm transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 relative">
                         <div>
@@ -201,7 +240,7 @@
                             <div class="bg-blue-50 text-[#004b87] px-3 py-1.5 rounded-lg font-black text-sm shrink-0">
                                 ${p.horas}h
                             </div>
-                            <button onclick="editarParte(${p.id_parte}, ${p.horas}, '${p.tareas.replace(/'/g, "\\'")}', ${p.id_obra})" class="bg-yellow-50 hover:bg-yellow-100 text-[#004b87] p-2 rounded-lg text-xs font-bold transition" title="Editar parte">✏️</button>
+                            <button onclick="abrirModalEditar(${p.id_parte}, ${p.horas}, '${tareasSeguras}', ${p.id_obra}, '${nombreObraSeguro}', '${fechaLimpia}')" class="bg-yellow-50 hover:bg-yellow-100 text-[#004b87] p-2 rounded-lg text-xs font-bold transition" title="Editar parte">✏️</button>
                             <button onclick="eliminarParte(${p.id_parte})" class="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg text-xs font-bold transition" title="Eliminar parte">🗑️</button>
                         </div>
                     </div>
@@ -218,22 +257,58 @@
             renderizarTablaPartes();
         }
 
-        async function editarParte(idParte, horasActuales, tareasActuales, obraActual) {
-            const nuevasHoras = prompt("Modificar horas trabajadas:", horasActuales);
-            if (nuevasHoras === null) return;
+        function abrirModalEditar(idParte, horas, tareas, idObraActual, nombreObraActual, fechaActual) {
+            document.getElementById('modalIdParte').value = idParte;
+            document.getElementById('modalHoras').value = horas;
+            document.getElementById('modalTareas').value = tareas;
+            document.getElementById('buscadorObraInput').value = nombreObraActual;
+            document.getElementById('modalIdObraSeleccionada').value = idObraActual;
+            document.getElementById('modalFechaParte').value = fechaActual;
 
-            const nuevasTareas = prompt("Modificar descripción de tareas:", tareasActuales);
-            if (nuevasTareas === null) return;
+            filtrarObrasModal('');
+            document.getElementById('modalEditarParte').classList.remove('hidden');
+        }
 
-            let listaTextoObras = listaObrasGlobal.map(o => `${o.id_obra} -> ${o.nombre}`).join('\n');
-            const nuevaObra = prompt(`Introduce el ID de la nueva obra:\n\n${listaTextoObras}`, obraActual);
-            if (nuevaObra === null) return;
+        function cerrarModalEdicion() {
+            document.getElementById('modalEditarParte').classList.add('hidden');
+        }
 
-            const horasLimpias = parseFloat(nuevasHoras.replace(',', '.'));
-            const obraLimpia = parseInt(nuevaObra);
+        function filtrarObrasModal(query) {
+            const contenedor = document.getElementById('listaObrasResultados');
+            contenedor.innerHTML = '';
+            const filtradas = listaObrasGlobal.filter(o => o.nombre.toLowerCase().includes(query.toLowerCase())).slice(0, 50);
+            
+            if (filtradas.length === 0) {
+                contenedor.innerHTML = '<div class="p-3 text-xs text-gray-400 text-center">No se encontraron obras.</div>';
+                return;
+            }
 
-            if (isNaN(horasLimpias) || isNaN(obraLimpia)) {
-                alert('❌ Datos incorrectos. Revisa las horas o el ID de obra.');
+            filtradas.forEach(o => {
+                contenedor.innerHTML += `<div onclick="seleccionarObraModal(${o.id_obra}, '${o.nombre.replace(/'/g, "\\'")}')" class="p-2.5 text-xs text-gray-700 hover:bg-yellow-50 hover:text-[#004b87] cursor-pointer font-medium transition">🏢 ${o.nombre}</div>`;
+            });
+        }
+
+        function seleccionarObraModal(idObra, nombreObra) {
+            document.getElementById('buscadorObraInput').value = nombreObra;
+            document.getElementById('modalIdObraSeleccionada').value = idObra;
+            document.getElementById('listaObrasResultados').innerHTML = `<div class="p-2.5 text-xs font-bold text-green-700 bg-green-50">✅ Obra seleccionada: ${nombreObra}</div>`;
+        }
+
+        async function guardarEdicionParteModal() {
+            const idParte = document.getElementById('modalIdParte').value;
+            const horas = parseFloat(document.getElementById('modalHoras').value);
+            const tareas = document.getElementById('modalTareas').value;
+            let id_obra = document.getElementById('modalIdObraSeleccionada').value;
+            const fecha = document.getElementById('modalFechaParte').value;
+
+            if (!id_obra) {
+                const textoEscrito = document.getElementById('buscadorObraInput').value.trim();
+                const obraEncontrada = listaObrasGlobal.find(o => o.nombre.toLowerCase().trim() === textoEscrito.toLowerCase());
+                if (obraEncontrada) { id_obra = obraEncontrada.id_obra; }
+            }
+
+            if (isNaN(horas) || !id_obra) {
+                alert('❌ Revisa que las horas sean correctas y hayas seleccionado una obra válida de la lista.');
                 return;
             }
 
@@ -241,16 +316,17 @@
                 const respuesta = await fetch(`/api/partes/${idParte}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ horas: horasLimpias, tareas: nuevasTareas, id_obra: obraLimpia })
+                    body: JSON.stringify({ horas, tareas, id_obra: parseInt(id_obra), fecha })
                 });
 
                 const resultado = await respuesta.json();
                 if (resultado.success) {
                     alert('✅ ¡Parte modificado correctamente!');
+                    cerrarModalEdicion();
                     const idEncargado = localStorage.getItem('usuario_id');
                     await cargarPartesCuadrilla(idEncargado);
                 } else {
-                    alert('❌ Error al modificar el parte.');
+                    alert('❌ Error al modificar el parte: ' + (resultado.error || ''));
                 }
             } catch (error) {
                 console.error('Error de conexión al editar:', error);
@@ -259,7 +335,6 @@
         }
 
         async function eliminarParte(idParte) {
-            // Doble confirmación de seguridad solicitada
             if (!confirm("⚠️ ¿Estás seguro de que deseas eliminar este parte?")) {
                 return;
             }
