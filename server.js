@@ -953,15 +953,14 @@ app.get('/api/admin/resumen-jefes-dedicacion', async (req, res) => {
     }
 
     try {
-        // Probamos agrupando por id_usuario (si en tu tabla se llama id_operario, cámbialo aquí abajo)
-        const [rows] = await pool.query(`
+        const resultado = await pool.query(`
             SELECT id_usuario, SUM(horas) as total_horas
-            FROM partes
-            WHERE fecha BETWEEN ? AND ?
-            GROUP BY id_usuario
+            FROM partes_trabajo
+            WHERE fecha BETWEEN $1 AND $2
+            GROUP BY id_usuario;
         `, [inicio, fin]);
 
-        res.json({ success: true, resumen: rows });
+        res.json({ success: true, resumen: resultado.rows });
     } catch (error) {
         console.error("Error SQL detallado en resumen-jefes:", error.message);
         res.status(500).json({ success: false, error: error.message });
