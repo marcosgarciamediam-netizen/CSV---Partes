@@ -969,6 +969,27 @@ app.get('/api/admin/resumen-jefes-dedicacion', async (req, res) => {
 
 
 // ==========================================
+// RUTA: Eliminar un parte de trabajo
+// ==========================================
+app.delete('/api/partes/:id_parte', async (req, res) => {
+  const { id_parte } = req.params;
+
+  try {
+    const resultado = await pool.query('DELETE FROM partes_trabajo WHERE id_parte = $1 RETURNING *;', [id_parte]);
+
+    if (resultado.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Parte no encontrado' });
+    }
+
+    res.json({ success: true, mensaje: '¡Parte eliminado correctamente!' });
+  } catch (error) {
+    console.error('Error al eliminar el parte:', error);
+    res.status(500).json({ success: false, error: 'Error interno en el servidor' });
+  }
+});
+
+
+// ==========================================
 // ENCENDIDO DEL SERVIDOR
 // ==========================================
 app.listen(PORT, () => {
