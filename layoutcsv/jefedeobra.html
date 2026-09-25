@@ -243,33 +243,48 @@
                         body: JSON.stringify({ horas: totalHoras, tareas, id_obra: idObra, fecha: fechaInicio }) 
                     });
                     if ((await res.json()).success) {
-                        feedback.textContent = '✅ Actualizado'; feedback.className = 'p-3 text-xs font-semibold rounded text-center bg-green-50 text-green-700 block mt-4';
-                        cancelarEdicion(); cargarMiResumenMensual(); 
+                        feedback.textContent = '✅ Actualizado correctamente'; 
+                        feedback.className = 'p-3 text-xs font-semibold rounded text-center bg-green-50 text-green-700 block mt-4';
+                        cancelarEdicion(); 
+                        cargarMiResumenMensual(); 
                     }
                 } else {
-                    const start = new Date(fechaInicio);
-                    const end = fechaFin ? new Date(fechaFin) : new Date(fechaInicio);
-                    let diasLaborables = [];
-                    let d = new Date(start);
-                    while (d <= end) {
-                        if (d.getDay() !== 0 && d.getDay() !== 6) diasLaborables.push(new Date(d));
-                        d.setDate(d.getDate() + 1);
+                    // Si se indicó fecha fin y es distinta, podemos guardar la fecha de inicio o reflejar el rango en las tareas si se desea, 
+                    // pero se envía un único registro con la fecha de inicio seleccionada y el total de horas.
+                    const fechaRegistro = fechaInicio;
+                    const detalleTareas = fechaFin && fechaFin !== fechaInicio 
+                        ? `[Del ${fechaInicio} al ${fechaFin}] ${tareas}` 
+                        : tareas;
+
+                    const res = await fetch('/api/partes', { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ 
+                            id_usuario: idUsuario, 
+                            id_obra: idObra, 
+                            fecha: fechaRegistro, 
+                            horas: totalHoras, 
+                            tareas: detalleTareas 
+                        }) 
+                    });
+
+                    const data = await res.json();
+                    if (data.success) {
+                        feedback.textContent = '✅ Parte guardado con éxito.'; 
+                        feedback.className = 'p-3 text-xs font-semibold rounded text-center bg-green-50 text-green-700 block mt-4';
+                        document.getElementById('miTareasInput').value = '';
+                        document.getElementById('miFechaFin').value = '';
+                        cargarMiResumenMensual();
+                    } else {
+                        feedback.textContent = '❌ Error al guardar el parte.'; 
+                        feedback.className = 'p-3 text-xs font-semibold rounded text-center bg-red-50 text-red-700 block mt-4';
                     }
-                    if (diasLaborables.length === 0) { alert('Rango en fin de semana.'); btn.disabled = false; return; }
-                    
-                    const horasPorDia = Number((totalHoras / diasLaborables.length).toFixed(1));
-                    
-                    for (let dia of diasLaborables) {
-                        await fetch('/api/partes', { 
-                            method: 'POST', headers: { 'Content-Type': 'application/json' }, 
-                            body: JSON.stringify({ id_usuario: idUsuario, id_obra: idObra, fecha: dia.toISOString().split('T')[0], horas: horasPorDia, tareas }) 
-                        });
-                    }
-                    feedback.textContent = `✅ Repartido en ${diasLaborables.length} días.`; feedback.className = 'p-3 text-xs font-semibold rounded text-center bg-green-50 text-green-700 block mt-4';
-                    document.getElementById('miTareasInput').value = '';
-                    cargarMiResumenMensual();
                 }
-            } catch (error) { console.error(error); }
+            } catch (error) { 
+                console.error(error);
+                feedback.textContent = '❌ Error de conexión.'; 
+                feedback.className = 'p-3 text-xs font-semibold rounded text-center bg-red-50 text-red-700 block mt-4';
+            }
             btn.disabled = false;
         }
 
