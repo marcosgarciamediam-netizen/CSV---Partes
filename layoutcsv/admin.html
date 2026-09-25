@@ -99,9 +99,14 @@
                     </button>
                     <h1 id="titulo-seccion" class="text-lg md:text-2xl font-bold text-[#004b87]">Panel de Administración</h1>
                 </div>
-                <div class="flex items-center gap-3">
-                    <span class="text-sm font-bold text-[#004b87] hidden sm:inline">Administrador</span>
-                    <div class="w-10 h-10 bg-yellow-400 rounded-full border-2 border-[#004b87] flex items-center justify-center font-bold text-[#004b87]">A</div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm font-bold text-[#004b87] hidden sm:inline">Administrador</span>
+                        <div class="w-10 h-10 bg-yellow-400 rounded-full border-2 border-[#004b87] flex items-center justify-center font-bold text-[#004b87]">A</div>
+                    </div>
+                    <button onclick="cerrarSesion()" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold text-xs px-3 py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm" title="Cerrar Sesión">
+                        <span>🚪</span> <span class="hidden sm:inline">Salir</span>
+                    </button>
                 </div>
             </header>
 
@@ -486,6 +491,13 @@
             if (nombreVista === 'usuarios') cargarUsuariosAdmin();
             if (nombreVista === 'asignaciones') cargarDatosAsignaciones();
             if (nombreVista === 'dedicacion') cargarJefesDedicacion();
+        }
+
+        function cerrarSesion() {
+            if (confirm("¿Estás seguro de que deseas cerrar sesión?")) {
+                localStorage.clear();
+                window.location.replace('index.html');
+            }
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1091,7 +1103,6 @@
                     return;
                 }
 
-                // Consultar horas usando por defecto el mes en curso para el cálculo de la barra inicial
                 let mapaHorasJefes = {};
                 try {
                     const resResumen = await fetch(`/api/admin/resumen-jefes-dedicacion?inicio=${defaultInicio}&fin=${defaultFin}`);
