@@ -202,6 +202,7 @@
                                 ${p.horas}h
                             </div>
                             <button onclick="editarParte(${p.id_parte}, ${p.horas}, '${p.tareas.replace(/'/g, "\\'")}', ${p.id_obra})" class="bg-yellow-50 hover:bg-yellow-100 text-[#004b87] p-2 rounded-lg text-xs font-bold transition" title="Editar parte">✏️</button>
+                            <button onclick="eliminarParte(${p.id_parte})" class="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg text-xs font-bold transition" title="Eliminar parte">🗑️</button>
                         </div>
                     </div>
                 `;
@@ -253,6 +254,34 @@
                 }
             } catch (error) {
                 console.error('Error de conexión al editar:', error);
+                alert('❌ No se pudo conectar con el servidor.');
+            }
+        }
+
+        async function eliminarParte(idParte) {
+            // Doble confirmación de seguridad solicitada
+            if (!confirm("⚠️ ¿Estás seguro de que deseas eliminar este parte?")) {
+                return;
+            }
+            if (!confirm("❌ Esta acción es irreversible. Haz clic en Aceptar para confirmar la eliminación.")) {
+                return;
+            }
+
+            try {
+                const respuesta = await fetch(`/api/partes/${idParte}`, {
+                    method: 'DELETE'
+                });
+
+                const resultado = await respuesta.json();
+                if (resultado.success) {
+                    alert('✅ ¡Parte eliminado correctamente!');
+                    const idEncargado = localStorage.getItem('usuario_id');
+                    await cargarPartesCuadrilla(idEncargado);
+                } else {
+                    alert('❌ Error al eliminar el parte: ' + (resultado.error || 'No se pudo completar'));
+                }
+            } catch (error) {
+                console.error('Error de conexión al eliminar:', error);
                 alert('❌ No se pudo conectar con el servidor.');
             }
         }
