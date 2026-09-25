@@ -562,7 +562,7 @@ app.get('/api/jefe/:id_jefe/obras', async (req, res) => {
 const ExcelJS = require('exceljs');
 
 // ==========================================
-// RUTA: Exportar Quincena en Formato Matricial Excel Real (.xlsx) con Colores
+// RUTA: Exportar Quincena en Formato Matricial Excel Real (.xlsx) con Formato Numérico
 // ==========================================
 app.get('/api/admin/exportar', async (req, res) => {
   const { inicio, fin } = req.query;
@@ -623,11 +623,9 @@ app.get('/api/admin/exportar', async (req, res) => {
 
     const letrasDiasMap = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 
-    // Crear libro de Excel con ExcelJS
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Informe Quincenal');
 
-    // Estilos reutilizables
     const estiloBordeFino = {
       top: { style: 'thin', color: { argb: 'FFD3D3D3' } },
       left: { style: 'thin', color: { argb: 'FFD3D3D3' } },
@@ -636,19 +634,18 @@ app.get('/api/admin/exportar', async (req, res) => {
     };
 
     const estilosFondo = {
-      rojo: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } },       // Fines de semana
-      vacaciones: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC0CB' } }, // Rosa
-      baja: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF90EE90' } },       // Verde
-      permiso: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFADD8E6' } },    // Azul
+      rojo: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } },
+      vacaciones: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC0CB' } },
+      baja: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF90EE90' } },
+      permiso: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFADD8E6' } },
       cabecera: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } },
       obraCab: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9EDF7' } }
     };
 
-    // Recorrer las obras para pintar las tablas de manera consecutiva
     Object.values(obrasMap).forEach(obra => {
       let totalHorasObra = 0;
 
-      // 1. Fila de Letras de Días
+      // 1. Cabecera de letras
       const filaLetras = ['Código', 'Operario', 'Categoría', 'Obra'];
       diasArray.forEach(d => filaLetras.push(letrasDiasMap[d.getDay()]));
       filaLetras.push('Total Horas');
@@ -661,19 +658,26 @@ app.get('/api/admin/exportar', async (req, res) => {
         cell.alignment = { horizontal: 'center', vertical: 'middle' };
       });
 
-      // 2. Fila de Números de Días con Nombre de Obra
+      // 2. Cabecera de números de días (como valores numéricos reales)
       const filaNumeros = [obra.nombre, '', '', ''];
       diasArray.forEach(d => filaNumeros.push(d.getDate()));
       filaNumeros.push('');
 
       const rNum = sheet.addRow(filaNumeros);
       rNum.font = { bold: true, color: { argb: 'FF004B87' } };
+      
+      // Forzar celdas de números de días como tipo número
+      diasArray.forEach((d, idx) => {
+        const cell = rNum.getCell(5 + idx);
+        cell.value = d.getDate();
+        cell.numFmt = '0';
+      });
+
       rNum.eachCell((cell) => {
         cell.fill = estilosFondo.obraCab;
         cell.border = estiloBordeFino;
         cell.alignment = { horizontal: 'center', vertical: 'middle' };
       });
-      // Fusionar las celdas del título de la obra
       sheet.mergeCells(`A${rNum.number}:D${rNum.number}`);
 
       // 3. Filas de Operarios
@@ -685,15 +689,32 @@ app.get('/api/admin/exportar', async (req, res) => {
         diasArray.forEach(d => {
           const fStr = d.toISOString().split('T')[0];
           const celdaData = op.dias[fStr];
-          let contenido = '';
+          let contenido = null;
           let tipoCelda = 'trabajo';
 
           if (celdaData) {
-            if (celdaData.tipo === 'vacaciones') { contenido = 'V'; tipoCelda = 'vacaciones'; }
-            else if (celdaData.tipo === 'baja') { contenido = 'B'; tipoCelda = 'baja'; }
-            else if (celdaData.tipo === 'paternidad') { contenido = 'P'; tipoCelda = 'permiso'; }
-            else if (celdaData.tipo === 'permiso') { contenido = celdaData.val; tipoCelda = 'permiso'; sumaOp += parseFloat(celdaData.val || 0); }
-            else { contenido = celdaData.val; sumaOp += parseFloat(celdaData.val || 0); }
+            if (celdaData.tipo === 'vacaciones') { 
+              contenido = 'V'; 
+              tipoCelda = 'vacaciones'; 
+            }
+            else if (celdaData.tipo === 'baja') { 
+              contenido = 'B'; 
+              tipoCelda = 'baja'; 
+            }
+            else if (celdaData.tipo === 'paternidad') { 
+              contenido = 'P'; 
+              tipoCelda = 'permiso'; 
+            }
+            else if (celdaData.tipo === 'permiso') { 
+              contenido = parseFloat(celdaData.val || 0); 
+              tipoCelda = 'permiso'; 
+              sumaOp += contenido; 
+            }
+            else { 
+              contenido = parseFloat(celdaData.val || 0); 
+              tipoCelda = 'trabajo'; 
+              sumaOp += contenido; 
+            }
           }
           filaOp.push(contenido);
           tiposDiasArray.push(tipoCelda);
@@ -706,11 +727,16 @@ app.get('/api/admin/exportar', async (req, res) => {
         rOp.border = estiloBordeFino;
         rOp.alignment = { vertical: 'middle' };
 
-        // Aplicar estilos específicos por celda de día
+        // Asegurar formato numérico en las horas y aplicar colores
         diasArray.forEach((d, idx) => {
-          const colIndex = 5 + idx; // Las columnas de días empiezan en la 5 (E)
+          const colIndex = 5 + idx;
           const cell = rOp.getCell(colIndex);
           cell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+          // Si es un número (horas trabajadas o permiso numérico), asignar formato decimal de Excel
+          if (typeof cell.value === 'number') {
+            cell.numFmt = '#,##0.0';
+          }
 
           const esFinDeSemana = d.getDay() === 0 || d.getDay() === 6;
           const tipo = tiposDiasArray[idx];
@@ -721,7 +747,10 @@ app.get('/api/admin/exportar', async (req, res) => {
           } else if (tipo === 'baja') {
             cell.fill = estilosFondo.baja;
             cell.font = { bold: true, color: { argb: 'FF003300' } };
-          } else if (tipo === 'permiso') {
+          } else if (tipo === 'permiso' && isNaN(cell.value)) {
+            cell.fill = estilosFondo.permiso;
+            cell.font = { bold: true, color: { argb: 'FF000066' } };
+          } else if (tipo === 'permiso' && !isNaN(cell.value)) {
             cell.fill = estilosFondo.permiso;
             cell.font = { bold: true, color: { argb: 'FF000066' } };
           } else if (esFinDeSemana) {
@@ -729,6 +758,10 @@ app.get('/api/admin/exportar', async (req, res) => {
             cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
           }
         });
+
+        // Formato para la celda de Total Horas de la fila
+        const cellTotalOp = rOp.getCell(rOp.cellCount);
+        cellTotalOp.numFmt = '#,##0.0';
       });
 
       // 4. Fila Total Obra
@@ -738,6 +771,10 @@ app.get('/api/admin/exportar', async (req, res) => {
 
       const rTot = sheet.addRow(filaTotal);
       rTot.font = { bold: true, color: { argb: 'FF004B87' } };
+      
+      const cellValTot = rTot.getCell(rTot.cellCount);
+      cellValTot.numFmt = '#,##0.0';
+
       rTot.eachCell((cell) => {
         cell.fill = estilosFondo.obraCab;
         cell.border = estiloBordeFino;
@@ -745,11 +782,9 @@ app.get('/api/admin/exportar', async (req, res) => {
       });
       sheet.mergeCells(`A${rTot.number}:D${rTot.number}`);
 
-      // Añadir espacio en blanco entre obras
       sheet.addRow([]);
     });
 
-    // Configurar cabeceras de respuesta HTTP para Excel real (.xlsx)
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename=informe_quincenal_matricial.xlsx');
 
@@ -761,7 +796,6 @@ app.get('/api/admin/exportar', async (req, res) => {
     res.status(500).json({ success: false, error: 'Error interno en el servidor' });
   }
 });
-
 // ==========================================
 // ENCENDIDO DEL SERVIDOR
 // ==========================================
