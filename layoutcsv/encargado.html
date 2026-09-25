@@ -378,14 +378,9 @@
                                     <div class="text-xs text-gray-500 mb-1">${p.obra_nombre} | Fecha: ${fechaParte}</div>
                                     <div class="text-xs bg-gray-50 p-2 rounded text-gray-700">${p.tareas}</div>
                                 </div>
-                                <div class="flex items-center gap-2 shrink-0">
-                                    <button onclick="descargarParteIndex(${index})" class="bg-yellow-50 hover:bg-yellow-100 text-[#004b87] border border-yellow-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 no-print">
-                                        <span>📄</span> Descargar PDF
-                                    </button>
-                                    <button type="button" onclick="eliminarParteConsulta(${p.id_parte})" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 no-print" title="Eliminar parte">
-                                        <span>🗑️</span> Eliminar
-                                    </button>
-                                </div>
+                                <button onclick="descargarParteIndex(${index})" class="bg-yellow-50 hover:bg-yellow-100 text-[#004b87] border border-yellow-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shrink-0 no-print">
+                                    <span>📄</span> Descargar PDF
+                                </button>
                             </div>`;
                     });
                     document.getElementById('statHoras').textContent = totalHoras.toLocaleString('es-ES', { maximumFractionDigits: 1 });
@@ -395,29 +390,6 @@
                     document.getElementById('statHoras').textContent = '0';
                 }
             } catch (e) { console.error(e); }
-        }
-
-        async function eliminarParteConsulta(idParte) {
-            if (!confirm("⚠️ ¿Estás totalmente seguro de que deseas eliminar este parte de trabajo? Esta acción no se puede deshacer.")) {
-                return;
-            }
-
-            try {
-                const res = await fetch(`/api/partes/${idParte}`, {
-                    method: 'DELETE'
-                });
-                
-                const resultado = await res.json();
-                if (resultado.success) {
-                    alert('✅ Parte eliminado correctamente.');
-                    consultarTrabajos();
-                } else {
-                    alert('❌ Error al eliminar el parte: ' + (resultado.error || 'Desconocido'));
-                }
-            } catch (error) {
-                console.error('Error de conexión al eliminar:', error);
-                alert('❌ No se pudo conectar con el servidor para eliminar el registro.');
-            }
         }
 
         function imprimirListadoCompleto() {
