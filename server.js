@@ -953,11 +953,8 @@ app.get('/api/admin/resumen-jefes-dedicacion', async (req, res) => {
     }
 
     try {
-        // Consulta SQL para sumar las horas de los partes cuyas obras estén asignadas a cada jefe, 
-        // o bien sumando las horas de sus partes directos según tu estructura de base de datos.
-        // Aquí sumamos los partes registrados en las obras asociadas a los jefes o imputados por ellos.
         const [rows] = await pool.query(`
-            p.id_usuario, SUM(p.horas) as total_horas
+            SELECT p.id_usuario, SUM(p.horas) as total_horas
             FROM partes p
             WHERE p.fecha BETWEEN ? AND ?
             GROUP BY p.id_usuario
