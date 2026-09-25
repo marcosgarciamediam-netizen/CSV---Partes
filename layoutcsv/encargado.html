@@ -3,308 +3,667 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSV Encargado - Panel de Control</title>
+    <title>CSV Jefe de Obra - Panel Ejecutivo</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            @page {
+                size: A4;
+                margin: 20mm 15mm 25mm 15mm;
+            }
+
+            html, body {
+                height: auto !important;
+                overflow: visible !important;
+                background: white !important;
+                -webkit-print-color-adjust: exact;
+            }
+            body * { visibility: hidden; }
+            
+            /* Solo se muestra el panel de resultados o la plantilla individual según corresponda */
+            #panelResultados:not(.hidden), #panelResultados:not(.hidden) *, 
+            #plantillaListadoImpresion:not(.hidden), #plantillaListadoImpresion:not(.hidden) *,
+            #plantillaParteIndividual:not(.hidden), #plantillaParteIndividual:not(.hidden) * { 
+                visibility: visible; 
+            }
+            
+            #panelResultados:not(.hidden), #plantillaListadoImpresion:not(.hidden), #plantillaParteIndividual:not(.hidden) { 
+                position: absolute !important; 
+                left: 0 !important; 
+                top: 0 !important; 
+                width: 100% !important; 
+                max-width: none !important;
+                border: none !important; 
+                padding: 0 !important; 
+                margin: 0 !important;
+                box-shadow: none !important;
+                background: white !important;
+                display: block !important;
+            }
+            .no-print { display: none !important; }
+
+            .print-item {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                margin-bottom: 12px;
+            }
+
+            .print-footer {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 10px;
+                color: #6b7280;
+                border-top: 1px solid #e5e7eb;
+                padding-top: 8px;
+            }
+            .print-footer .page-number:after {
+                content: counter(page);
+            }
+        }
+    </style>
 </head>
 <body class="bg-gray-100 font-sans">
     <script>
         (function() {
             const usuarioId = localStorage.getItem('usuario_id');
             const usuarioRol = (localStorage.getItem('usuario_rol') || '').toLowerCase().trim();
+            const rolesValidos = ['jefe_de_obra', 'jefedeobra', 'jefe de obra'];
             
-            if (!usuarioId || usuarioRol !== 'encargado') {
+            if (!usuarioId || !rolesValidos.includes(usuarioRol)) {
                 localStorage.clear();
-                alert('⚠️ Acceso no autorizado. Debes iniciar sesión como encargado.');
+                alert('⚠️ Acceso no autorizado.');
                 window.location.replace('index.html');
             }
         })();
     </script>
 
-    <div class="flex h-screen overflow-hidden">
+    <div class="flex h-screen overflow-hidden relative">
+        <div id="sidebar" class="fixed inset-y-0 left-0 z-30 w-72 bg-[#ffcc00] text-[#004b87] flex flex-col shadow-2xl border-r-4 border-[#004b87] overflow-y-auto shrink-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out md:relative">
+            <div class="p-6 border-b border-yellow-500 flex items-center justify-between">
+                <div class="text-xl font-extrabold tracking-tight">Panel Ejecutivo</div>
+                <button onclick="toggleSidebar()" class="text-lg font-bold p-1 hover:bg-yellow-400 rounded md:hidden">✕</button>
+            </div>
+            <nav class="p-4 space-y-1.5 flex-1 font-semibold">
+                <button onclick="cambiarVista('consulta')" id="btn-consulta" class="w-full text-left p-3 rounded-lg bg-yellow-400 text-[#004b87] font-bold shadow-sm transition flex items-center gap-2"><span>📊</span> Consulta de Obras</button>
+                <button onclick="cambiarVista('partes')" id="btn-partes" class="w-full text-left p-3 rounded-lg opacity-80 hover:bg-yellow-300 transition flex items-center gap-2"><span>📝</span> Mis Partes (Dedicación)</button>
+            </nav>
+        </div>
+
+        <div id="sidebar-backdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden"></div>
+
         <div class="flex-1 flex flex-col overflow-hidden w-full">
             <header class="bg-white p-4 md:p-6 shadow-sm flex justify-between items-center z-10 border-b border-gray-200">
                 <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="p-2 rounded-lg bg-yellow-100 text-[#004b87] hover:bg-yellow-200 transition font-bold md:hidden">☰</button>
                     <div class="w-10 h-10 bg-[#ffcc00] rounded-xl flex items-center justify-center font-black text-[#004b87] border-2 border-[#004b87]">CSV</div>
-                    <h1 class="text-lg md:text-2xl font-bold text-[#004b87]">Panel de Encargado</h1>
+                    <h1 id="titulo-seccion" class="text-lg font-bold text-[#004b87]">Consulta de Obras</h1>
                 </div>
                 <div class="flex items-center gap-3">
-                    <span id="nombreUsuarioHeader" class="text-sm font-bold text-[#004b87]">Encargado</span>
+                    <span id="nombreUsuarioHeader" class="text-sm font-bold text-[#004b87]">Jefe de Obra</span>
                     <button onclick="cerrarSesion()" class="bg-red-50 text-red-600 hover:bg-red-100 font-bold text-xs px-3 py-2 rounded-lg transition">🚪 Salir</button>
                 </div>
             </header>
 
             <main class="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50 space-y-6">
                 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- VISTA 1: CONSULTA DE OBRAS -->
+                <section id="seccion-consulta" class="vista-panel space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h2 class="text-lg font-bold text-[#004b87] mb-2">Control de Cuadrillas</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-4 bg-gray-50 rounded-lg border">
+                            <div class="relative">
+                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Obra Asignada</label>
+                                <input type="text" id="buscadorObraConsulta" placeholder="Escribe para buscar obra..." oninput="filtrarObrasPrediccion('Consulta', this.value)" class="w-full border p-2.5 rounded-lg bg-white text-sm outline-none font-semibold" autocomplete="off" />
+                                <div id="listaObrasConsultaResultados" class="absolute z-20 left-0 right-0 mt-1 border rounded-xl max-h-48 overflow-y-auto bg-white divide-y divide-gray-100 shadow-xl hidden"></div>
+                                <input type="hidden" id="filtroObra" />
+                            </div>
+                            <div><label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Desde</label><input type="date" id="filtroInicio" class="w-full border p-2.5 rounded-lg bg-white text-sm" /></div>
+                            <div><label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Hasta</label><input type="date" id="filtroFin" class="w-full border p-2.5 rounded-lg bg-white text-sm" /></div>
+                        </div>
+                        <div class="flex flex-wrap gap-3">
+                            <button onclick="consultarTrabajos()" class="bg-[#ffcc00] text-[#004b87] font-bold text-sm px-6 py-3 rounded-lg shadow hover:bg-yellow-400 transition">📊 Consultar</button>
+                            <button onclick="imprimirListadoCompleto()" class="bg-[#004b87] text-white font-bold text-sm px-6 py-3 rounded-lg shadow hover:bg-blue-900 transition flex items-center gap-2"><span>📥</span> Descargar Todos en PDF</button>
+                        </div>
+                    </div>
                     
-                    <!-- Columna Izquierda: Registrar parte para un operario de la plantilla -->
-                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 lg:col-span-1 space-y-4">
-                        <h2 class="text-lg font-bold text-[#004b87]">Registrar Parte de Cuadrilla</h2>
-                        <p class="text-xs text-gray-600">Selecciona un trabajador de tu plantilla para imputarle horas.</p>
-                        
-                        <form id="formParteEncargado" onsubmit="enviarParteEncargado(event)" class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Trabajador</label>
-                                <select id="selectOperario" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50">
-                                    <option value="">Cargando plantilla...</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Obra</label>
-                                <select id="selectObra" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50">
-                                    <option value="">Cargando obras...</option>
-                                </select>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Fecha</label>
-                                    <input type="date" id="inputFecha" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50" />
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Horas</label>
-                                    <input type="number" id="inputHoras" step="0.5" min="0.5" max="24" value="8" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50" />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Tareas / Detalles</label>
-                                <textarea id="inputTareas" rows="2" required placeholder="Descripción de las labores..." class="w-full border p-2.5 rounded-xl text-sm bg-gray-50"></textarea>
-                            </div>
-
-                            <div id="mensajeFeedback" class="hidden p-2 text-xs font-semibold rounded text-center"></div>
-
-                            <button type="submit" id="btnEnviar" class="w-full bg-[#ffcc00] text-[#004b87] font-extrabold text-sm py-3 rounded-xl shadow-md hover:bg-yellow-400 transition">
-                                🚀 Registrar Parte
-                            </button>
-                        </form>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hidden" id="panelResultados">
+                        <div class="flex justify-between items-center mb-4 border-b pb-2"><h3 class="text-md font-bold text-[#004b87]">Desglose de Partes</h3><div class="text-sm font-bold bg-yellow-100 text-yellow-800 px-3 py-1 rounded">Total: <span id="statHoras">0</span>h</div></div>
+                        <div id="listaPartes" class="space-y-3"></div>
                     </div>
+                </section>
 
-                    <!-- Columna Derecha: Historial y supervisión de partes recientes de la cuadrilla con paginación -->
-                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 lg:col-span-2 flex flex-col">
-                        <h2 class="text-lg font-bold text-[#004b87] mb-2">Últimos Partes de la Cuadrilla</h2>
-                        <p class="text-xs text-gray-600 mb-4">Supervisión en tiempo real de la actividad registrada por tus operarios.</p>
-                        
-                        <div id="listaPartesCuadrilla" class="space-y-3 overflow-y-auto flex-1 max-h-[450px] pr-1">
-                            <div class="p-4 text-center text-sm text-gray-400">Cargando partes...</div>
+                <!-- VISTA 2: MIS PARTES -->
+                <section id="seccion-partes" class="vista-panel hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                            <h2 class="text-lg font-bold text-[#004b87] mb-2">Imputar Dedicación</h2>
+                            <form id="formParte" onsubmit="enviarMiParte(event)" class="space-y-4">
+                                <div class="relative">
+                                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Obra Asignada</label>
+                                    <input type="text" id="buscadorObraImputacion" placeholder="Escribe para buscar obra..." oninput="filtrarObrasPrediccion('Imputacion', this.value)" required class="w-full border p-3 rounded-xl text-sm bg-gray-50 font-semibold outline-none" autocomplete="off" />
+                                    <div id="listaObrasImputacionResultados" class="absolute z-20 left-0 right-0 mt-1 border rounded-xl max-h-48 overflow-y-auto bg-white divide-y divide-gray-100 shadow-xl hidden"></div>
+                                    <input type="hidden" id="miObraSelect" required />
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div><label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Fecha Inicio</label><input type="date" id="miFechaInicio" required class="w-full border p-3 rounded-xl text-sm bg-gray-50" /></div>
+                                    <div id="contenedorFechaFin"><label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Fecha Fin (Opcional)</label><input type="date" id="miFechaFin" class="w-full border p-3 rounded-xl text-sm bg-gray-50" /></div>
+                                </div>
+                                <div><label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Total Horas</label><input type="number" id="miHorasInput" step="0.5" min="0.5" max="300" value="8" required class="w-full border p-3 rounded-xl text-sm bg-gray-50" /></div>
+                                <div><label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Detalle</label><textarea id="miTareasInput" rows="2" required placeholder="Labores..." class="w-full border p-3 rounded-xl text-sm bg-gray-50"></textarea></div>
+                                <div id="mensajeFeedback" class="hidden p-3 text-xs font-semibold rounded text-center"></div>
+                                <div class="flex gap-2">
+                                    <button type="submit" id="btnSubmitParte" class="flex-1 bg-[#ffcc00] text-[#004b87] font-extrabold text-sm py-3.5 rounded-xl shadow-md">🚀 Guardar</button>
+                                    <button type="button" id="btnCancelarEdicion" onclick="cancelarEdicion()" class="hidden bg-gray-200 text-gray-700 font-bold text-sm px-4 rounded-xl">Cancelar</button>
+                                </div>
+                            </form>
                         </div>
 
-                        <!-- Controles de Paginación -->
-                        <div id="paginacionContenedor" class="flex justify-between items-center mt-4 pt-3 border-t border-gray-200 hidden">
-                            <button onclick="cambiarPagina(-1)" id="btnAnterior" class="bg-gray-100 text-[#004b87] font-bold text-xs px-4 py-2 rounded-lg hover:bg-gray-200 transition">◀ Anterior</button>
-                            <span id="textoPaginacion" class="text-xs font-semibold text-gray-600">Página 1 de 1</span>
-                            <button onclick="cambiarPagina(1)" id="btnSiguiente" class="bg-gray-100 text-[#004b87] font-bold text-xs px-4 py-2 rounded-lg hover:bg-gray-200 transition">Siguiente ▶</button>
+                        <div class="flex flex-col gap-6">
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                <h2 class="text-lg font-bold text-[#004b87] mb-2">Resumen Período Seleccionado</h2>
+                                <div class="bg-gray-50 rounded-lg border p-4"><table class="w-full text-left"><thead><tr class="border-b-2"><th class="pb-2 text-xs font-bold uppercase text-gray-500">Obra</th><th class="pb-2 text-xs font-bold uppercase text-gray-500 text-center">Horas</th><th class="pb-2 text-xs font-bold uppercase text-[#004b87] text-center">%</th></tr></thead><tbody id="tbodyResumen"></tbody></table></div>
+                                <div class="mt-4 flex justify-between items-center bg-blue-50 p-4 rounded-lg border"><span class="font-bold text-[#004b87]">Total:</span><span class="font-black text-xl text-[#004b87]" id="totalHorasMes">0h</span></div>
+                            </div>
+
+                            <!-- HISTORIAL CON SELECTOR DE RANGO DE FECHAS -->
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex-1 flex flex-col">
+                                <h2 class="text-lg font-bold text-[#004b87] mb-2">Historial de Partes</h2>
+                                
+                                <div class="grid grid-cols-2 gap-2 mb-3 bg-gray-50 p-3 rounded-lg border">
+                                    <div>
+                                        <label class="block text-[9px] font-bold text-[#004b87] uppercase">Desde</label>
+                                        <input type="date" id="historialFechaInicio" onchange="cargarMiResumenMensual()" class="w-full border p-1.5 rounded bg-white text-xs outline-none" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-[9px] font-bold text-[#004b87] uppercase">Hasta</label>
+                                        <input type="date" id="historialFechaFin" onchange="cargarMiResumenMensual()" class="w-full border p-1.5 rounded bg-white text-xs outline-none" />
+                                    </div>
+                                </div>
+
+                                <div id="listaMisPartesRaw" class="space-y-3 overflow-y-auto max-h-64 pr-2 flex-1"></div>
+                            </div>
                         </div>
                     </div>
-
-                </div>
-
+                </section>
             </main>
         </div>
     </div>
 
+    <!-- PLANTILLA OCULTA PARA IMPRESIÓN DEL LISTADO COMPLETO -->
+    <div id="plantillaListadoImpresion" class="hidden">
+        <div class="bg-white p-8 max-w-2xl mx-auto space-y-6 font-sans">
+            <div class="flex justify-between items-start border-b-2 border-gray-800 pb-4 mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-[#ffcc00] rounded-xl flex items-center justify-center font-black text-[#004b87] text-xl border-2 border-[#004b87]">CSV</div>
+                    <div>
+                        <h1 class="text-lg font-extrabold text-gray-900">Informe General de Partes de Trabajo</h1>
+                        <p class="text-xs text-gray-600 font-medium">CSV Construcción S.L.</p>
+                    </div>
+                </div>
+                <div class="text-right text-xs text-gray-700">
+                    <div><strong class="font-bold">Jefe de Obra:</strong> <span id="printListadoJefe"></span></div>
+                    <div><strong class="font-bold">Emisión:</strong> <span id="printListadoEmision"></span></div>
+                    <div><strong class="font-bold">Total Horas:</strong> <span id="printListadoTotalHoras"></span>h</div>
+                </div>
+            </div>
+
+            <div id="contenedorPartesImpresion" class="space-y-4"></div>
+
+            <div class="print-footer hidden print:flex">
+                <div>CSV Construcción S.L. - Documento Oficial</div>
+                <div class="flex items-center gap-2 font-black text-[#004b87]">CSV</div>
+                <div>Pág. <span class="page-number"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PLANTILLA OCULTA EXCLUSIVA PARA IMPRESIÓN INDIVIDUAL -->
+    <div id="plantillaParteIndividual" class="hidden">
+        <div class="bg-white p-8 max-w-2xl mx-auto space-y-6 font-sans">
+            <div class="flex justify-between items-start border-b-2 border-gray-800 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-[#ffcc00] rounded-xl flex items-center justify-center font-black text-[#004b87] text-xl border-2 border-[#004b87]">CSV</div>
+                    <div>
+                        <h1 class="text-lg font-extrabold text-gray-900">Parte de Trabajo Individual</h1>
+                        <p class="text-xs text-gray-600 font-medium">CSV Construcción S.L.</p>
+                    </div>
+                </div>
+                <div class="text-right text-xs text-gray-700">
+                    <div><strong class="font-bold">Jefe de Obra:</strong> <span id="indJefeNombre"></span></div>
+                    <div><strong class="font-bold">Emisión:</strong> <span id="indFechaEmision"></span></div>
+                </div>
+            </div>
+            
+            <div class="space-y-4 text-sm">
+                <div class="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border">
+                    <div><strong class="text-gray-700 block text-xs uppercase">Operario:</strong> <span id="indOperario"></span></div>
+                    <div><strong class="text-gray-700 block text-xs uppercase">Obra:</strong> <span id="indObra"></span></div>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg border space-y-2">
+                    <div class="flex justify-between font-bold text-gray-800 border-b pb-2">
+                        <span>Fecha del Parte:</span>
+                        <span id="indFecha"></span>
+                    </div>
+                    <div class="flex justify-between font-bold text-gray-800 border-b pb-2">
+                        <span>Total Horas Imputadas:</span>
+                        <span class="text-[#004b87] text-base"><span id="indHoras"></span>h</span>
+                    </div>
+                    <div><strong class="text-gray-700 block text-xs uppercase mb-1">Descripción de Tareas:</strong><div class="text-gray-600 bg-white p-3 rounded border" id="indTareas"></div></div>
+                </div>
+            </div>
+
+            <div class="print-footer hidden print:flex">
+                <div>CSV Construcción S.L. - Documento Oficial</div>
+                <div class="flex items-center gap-2 font-black text-[#004b87]">CSV</div>
+                <div>Pág. <span class="page-number"></span></div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        let partesGlobal = [];
-        let listaObrasGlobal = [];
-        let paginaActual = 1;
-        const elementosPorPagina = 20;
+        const nombresSecciones = { 'consulta': 'Consulta de Obras', 'partes': 'Mis Partes (Dedicación)' };
+        let editandoIdParte = null;
+        let listaObrasJefeGlobal = [];
+        let partesConsultaGlobal = [];
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('-translate-x-full'); document.getElementById('sidebar-backdrop').classList.toggle('hidden'); }
+
+        function cambiarVista(nombreVista) {
+            document.querySelectorAll('.vista-panel').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`seccion-${nombreVista}`).classList.remove('hidden');
+            document.getElementById('titulo-seccion').textContent = nombresSecciones[nombreVista];
+            document.querySelectorAll('nav button').forEach(btn => { btn.classList.remove('bg-yellow-400', 'font-bold', 'shadow-sm'); btn.classList.add('opacity-80'); });
+            const botonActivo = document.getElementById(`btn-${nombreVista}`);
+            botonActivo.classList.add('bg-yellow-400', 'font-bold', 'shadow-sm'); botonActivo.classList.remove('opacity-80');
+            if (window.innerWidth < 768) toggleSidebar();
+            if (nombreVista === 'partes') { cargarMiResumenMensual(); cancelarEdicion(); }
+        }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            const nombreUser = localStorage.getItem('usuario_nombre');
-            const idEncargado = localStorage.getItem('usuario_id');
-            if (nombreUser) document.getElementById('nombreUsuarioHeader').textContent = nombreUser;
-            
-            document.getElementById('inputFecha').value = new Date().toISOString().split('T')[0];
+            const idJefe = localStorage.getItem('usuario_id');
+            const nombreJefe = localStorage.getItem('usuario_nombre') || 'Jefe de Obra';
+            document.getElementById('nombreUsuarioHeader').textContent = nombreJefe;
+            document.getElementById('printListadoJefe').textContent = nombreJefe;
+            document.getElementById('printListadoEmision').textContent = new Date().toLocaleDateString('es-ES');
 
-            await cargarPlantillaYObra(idEncargado);
-            await cargarPartesCuadrilla(idEncargado);
+            const hoy = new Date();
+            document.getElementById('filtroInicio').value = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+            document.getElementById('filtroFin').value = hoy.toISOString().split('T')[0];
+            document.getElementById('miFechaInicio').value = hoy.toISOString().split('T')[0];
+            
+            const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+            const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
+            document.getElementById('historialFechaInicio').value = primerDiaMes;
+            document.getElementById('historialFechaFin').value = ultimoDiaMes;
+
+            try {
+                const res = await fetch(`/api/jefe/${idJefe}/obras`);
+                const data = await res.json();
+                if (data.success) {
+                    listaObrasJefeGlobal = data.obras;
+                }
+            } catch (e) { console.error(e); }
         });
 
-        async function cargarPlantillaYObra(idEncargado) {
-            try {
-                const resPlantilla = await fetch(`/api/encargado/${idEncargado}/plantilla`);
-                const dataPlantilla = await resPlantilla.json();
-                const selectOp = document.getElementById('selectOperario');
-                selectOp.innerHTML = '<option value="">-- Selecciona operario --</option>';
-                
-                if (dataPlantilla.success && dataPlantilla.plantilla.length > 0) {
-                    dataPlantilla.plantilla.forEach(op => {
-                        selectOp.innerHTML += `<option value="${op.id_usuario}">${op.nombre} (${op.categoria || 'General'})</option>`;
-                    });
-                } else {
-                    selectOp.innerHTML = '<option value="">No tienes operarios asignados</option>';
-                }
-
-                const resObras = await fetch('/api/obras');
-                const dataObras = await resObras.json();
-                const selectObra = document.getElementById('selectObra');
-                selectObra.innerHTML = '<option value="">-- Selecciona obra --</option>';
-                
-                if (dataObras.success) {
-                    listaObrasGlobal = dataObras.obras;
-                    listaObrasGlobal.forEach(o => {
-                        selectObra.innerHTML += `<option value="${o.id_obra}">${o.nombre}</option>`;
-                    });
-                }
-            } catch (error) {
-                console.error("Error al cargar datos del encargado:", error);
-            }
-        }
-
-        async function cargarPartesCuadrilla(idEncargado) {
-            try {
-                const res = await fetch(`/api/encargado/${idEncargado}/partes`);
-                const data = await res.json();
-
-                if (data.success) {
-                    partesGlobal = data.partes;
-                    paginaActual = 1;
-                    renderizarTablaPartes();
-                }
-            } catch (error) {
-                console.error("Error cargando partes:", error);
-            }
-        }
-
-        function renderizarTablaPartes() {
-            const contenedor = document.getElementById('listaPartesCuadrilla');
-            const contenedorPaginacion = document.getElementById('paginacionContenedor');
+        function filtrarObrasPrediccion(tipo, query) {
+            const contenedor = document.getElementById(`listaObras${tipo}Resultados`);
             contenedor.innerHTML = '';
-
-            if (partesGlobal.length === 0) {
-                contenedor.innerHTML = '<div class="p-6 bg-gray-50 text-center text-sm text-gray-500 border rounded-lg">No hay partes registrados recientes en tu cuadrilla.</div>';
-                contenedorPaginacion.classList.add('hidden');
+            const filtradas = listaObrasJefeGlobal.filter(o => o.nombre.toLowerCase().includes(query.toLowerCase())).slice(0, 30);
+            
+            if (filtradas.length === 0) {
+                contenedor.classList.add('hidden');
                 return;
             }
 
-            contenedorPaginacion.classList.remove('hidden');
+            contenedor.classList.remove('hidden');
+            filtradas.forEach(o => {
+                contenedor.innerHTML += `<div onclick="seleccionarObraPrediccion('${tipo}', ${o.id_obra}, '${o.nombre.replace(/'/g, "\\'")}')" class="p-2.5 text-xs text-gray-700 hover:bg-yellow-50 hover:text-[#004b87] cursor-pointer font-medium transition">🏢 ${o.nombre}</div>`;
+            });
+        }
 
-            const totalPaginas = Math.ceil(partesGlobal.length / elementosPorPagina);
-            if (paginaActual > totalPaginas) paginaActual = totalPaginas;
-            if (paginaActual < 1) paginaActual = 1;
+        function seleccionarObraPrediccion(tipo, idObra, nombreObra) {
+            document.getElementById(`buscadorObra${tipo}`).value = nombreObra;
+            document.getElementById(tipo === 'Consulta' ? 'filtroObra' : 'miObraSelect').value = idObra;
+            document.getElementById(`listaObras${tipo}Resultados`).classList.add('hidden');
+        }
 
-            const inicio = (paginaActual - 1) * elementosPorPagina;
-            const fin = inicio + elementosPorPagina;
-            const partesPagina = partesGlobal.slice(inicio, fin);
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.relative')) {
+                document.querySelectorAll('[id$="Resultados"]').forEach(el => el.classList.add('hidden'));
+            }
+        });
 
-            partesPagina.forEach(p => {
-                const fechaFormateada = new Date(p.fecha).toLocaleDateString('es-ES');
-                contenedor.innerHTML += `
-                    <div class="border border-gray-200 rounded-lg p-4 bg-white hover:shadow-sm transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 relative">
-                        <div>
-                            <div class="font-bold text-gray-800 text-sm">${p.operario_nombre}</div>
-                            <div class="text-xs font-semibold text-[#004b87]">🏗️ ${p.obra_nombre} <span class="text-gray-400 font-normal">| 📅 ${fechaFormateada}</span></div>
-                            <div class="text-xs text-gray-600 mt-1 bg-gray-50 p-2 rounded">${p.tareas}</div>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="bg-blue-50 text-[#004b87] px-3 py-1.5 rounded-lg font-black text-sm shrink-0">
-                                ${p.horas}h
-                            </div>
-                            <button onclick="editarParte(${p.id_parte}, ${p.horas}, '${p.tareas.replace(/'/g, "\\'")}', ${p.id_obra})" class="bg-yellow-50 hover:bg-yellow-100 text-[#004b87] p-2 rounded-lg text-xs font-bold transition" title="Editar parte">✏️</button>
-                        </div>
-                    </div>
-                `;
+        async function consultarTrabajos() {
+            const idObra = document.getElementById('filtroObra').value;
+            const inicio = document.getElementById('filtroInicio').value;
+            const fin = document.getElementById('filtroFin').value;
+            const contenedor = document.getElementById('listaPartes');
+            
+            if (!idObra) {
+                alert('⚠️ Por favor, selecciona una obra válida haciendo clic en la predicción.');
+                return;
+            }
+
+            document.getElementById('panelResultados').classList.remove('hidden');
+            contenedor.innerHTML = '<div class="p-4 text-center text-sm">Cargando...</div>';
+
+            try {
+                let url = `/api/admin/partes-filtrados?id_obra=${idObra}`;
+                if(inicio) url += `&fecha_inicio=${inicio}`;
+                if(fin) url += `&fecha_fin=${fin}`;
+
+                const res = await fetch(url); const data = await res.json();
+                contenedor.innerHTML = '';
+                
+                if (data.success && data.partes.length > 0) {
+                    partesConsultaGlobal = data.partes;
+                    let totalHoras = 0;
+                    data.partes.forEach((p, index) => {
+                        totalHoras += parseFloat(p.horas || 0);
+                        const horasLimpias = parseFloat(p.horas || 0).toLocaleString('es-ES', { maximumFractionDigits: 1 });
+                        const fechaParte = p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : 'N/A';
+                        
+                        contenedor.innerHTML += `
+                            <div class="border rounded-lg p-4 bg-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                <div>
+                                    <div class="flex justify-between font-bold text-sm">
+                                        <span>${p.operario_nombre}</span>
+                                        <span class="text-[#004b87] ml-3">${horasLimpias}h</span>
+                                    </div>
+                                    <div class="text-xs text-gray-500 mb-1">${p.obra_nombre} | Fecha: ${fechaParte}</div>
+                                    <div class="text-xs bg-gray-50 p-2 rounded text-gray-700">${p.tareas}</div>
+                                </div>
+                                <button onclick="descargarParteIndex(${index})" class="bg-yellow-50 hover:bg-yellow-100 text-[#004b87] border border-yellow-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shrink-0 no-print">
+                                    <span>📄</span> Descargar PDF
+                                </button>
+                            </div>`;
+                    });
+                    document.getElementById('statHoras').textContent = totalHoras.toLocaleString('es-ES', { maximumFractionDigits: 1 });
+                } else {
+                    partesConsultaGlobal = [];
+                    contenedor.innerHTML = '<div class="p-4 bg-gray-50 text-center text-sm border rounded-lg">No hay partes registrados para esta obra en el rango de fechas seleccionado.</div>';
+                    document.getElementById('statHoras').textContent = '0';
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function imprimirListadoCompleto() {
+            if (partesConsultaGlobal.length === 0) {
+                alert('⚠️ Primero debes realizar una consulta válida con resultados.');
+                return;
+            }
+
+            // Rellenar datos de cabecera de la plantilla de listado
+            const nombreJefe = localStorage.getItem('usuario_nombre') || 'Jefe de Obra';
+            document.getElementById('printListadoJefe').textContent = nombreJefe;
+            document.getElementById('printListadoEmision').textContent = new Date().toLocaleDateString('es-ES');
+            document.getElementById('printListadoTotalHoras').textContent = document.getElementById('statHoras').textContent;
+
+            // Construir los bloques agrupados por día de manera limpia
+            const contenedorImpresion = document.getElementById('contenedorPartesImpresion');
+            contenedorImpresion.innerHTML = '';
+
+            // Agrupar partes por fecha
+            const gruposPorFecha = {};
+            partesConsultaGlobal.forEach(p => {
+                const fechaStr = p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : 'Fecha no especificada';
+                if (!gruposPorFecha[fechaStr]) gruposPorFecha[fechaStr] = [];
+                gruposPorFecha[fechaStr].push(p);
             });
 
-            document.getElementById('textoPaginacion').textContent = `Página ${paginaActual} de ${totalPaginas || 1}`;
-            document.getElementById('btnAnterior').disabled = paginaActual === 1;
-            document.getElementById('btnSiguiente').disabled = paginaActual >= totalPaginas;
+            // Generar estructura de impresión limpia por bloques de días
+            for (const [fecha, partesDia] of Object.entries(gruposPorFecha)) {
+                let htmlPartesDia = '';
+                partesDia.forEach(p => {
+                    const horasLimpias = parseFloat(p.horas || 0).toLocaleString('es-ES', { maximumFractionDigits: 1 });
+                    htmlPartesDia += `
+                        <div class="bg-gray-50 p-3.5 rounded-lg border border-gray-200 mb-2.5 print-item">
+                            <div class="flex justify-between items-center text-sm font-bold text-gray-900 border-b pb-1.5 mb-1.5">
+                                <span>👤 ${p.operario_nombre}</span>
+                                <span class="text-[#004b87]">${horasLimpias}h</span>
+                            </div>
+                            <div class="text-xs text-gray-600 mb-1"><strong>Obra:</strong> ${p.obra_nombre}</div>
+                            <div class="text-xs text-gray-700 bg-white p-2 rounded border"><strong>Tareas:</strong> ${p.tareas}</div>
+                        </div>`;
+                });
+
+                contenedorImpresion.innerHTML += `
+                    <div class="mb-6 print-item">
+                        <div class="bg-[#004b87] text-white text-xs font-extrabold px-3 py-1.5 rounded-t-lg uppercase tracking-wider flex justify-between items-center">
+                            <span>📅 Fecha: ${fecha}</span>
+                            <span>${partesDia.length} parte(s)</span>
+                        </div>
+                        <div class="border-x border-b border-gray-300 p-3 rounded-b-lg bg-white">
+                            ${htmlPartesDia}
+                        </div>
+                    </div>`;
+            }
+
+            // Ocultar otros paneles y mostrar la plantilla de listado para imprimir
+            document.getElementById('panelResultados').classList.add('hidden');
+            document.getElementById('plantillaParteIndividual').classList.add('hidden');
+            
+            const plantillaListado = document.getElementById('plantillaListadoImpresion');
+            plantillaListado.classList.remove('hidden');
+
+            window.print();
+
+            plantillaListado.classList.add('hidden');
+            document.getElementById('panelResultados').classList.remove('hidden');
         }
 
-        function cambiarPagina(direccion) {
-            paginaActual += direccion;
-            renderizarTablaPartes();
+        function descargarParteIndex(index) {
+            const p = partesConsultaGlobal[index];
+            if (!p) return;
+
+            const nombreJefe = localStorage.getItem('usuario_nombre') || 'Jefe de Obra';
+            const fechaParte = p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : 'N/A';
+            const horasLimpias = parseFloat(p.horas || 0).toLocaleString('es-ES', { maximumFractionDigits: 1 });
+
+            document.getElementById('panelResultados').classList.add('hidden');
+            document.getElementById('plantillaListadoImpresion').classList.add('hidden');
+
+            document.getElementById('indJefeNombre').textContent = nombreJefe;
+            document.getElementById('indFechaEmision').textContent = new Date().toLocaleDateString('es-ES');
+            document.getElementById('indOperario').textContent = p.operario_nombre;
+            document.getElementById('indObra').textContent = p.obra_nombre;
+            document.getElementById('indFecha').textContent = fechaParte;
+            document.getElementById('indHoras').textContent = horasLimpias;
+            document.getElementById('indTareas').textContent = p.tareas;
+
+            const plantilla = document.getElementById('plantillaParteIndividual');
+            plantilla.classList.remove('hidden');
+
+            window.print();
+
+            plantilla.classList.add('hidden');
+            document.getElementById('panelResultados').classList.remove('hidden');
         }
 
-        async function editarParte(idParte, horasActuales, tareasActuales, obraActual) {
-            const nuevasHoras = prompt("Modificar horas trabajadas:", horasActuales);
-            if (nuevasHoras === null) return;
+        function iniciarEdicion(id_parte, id_obra, nombreObra, fecha, horas, tareas) {
+            editandoIdParte = id_parte;
+            document.getElementById('buscadorObraImputacion').value = nombreObra;
+            document.getElementById('miObraSelect').value = id_obra;
+            document.getElementById('miFechaInicio').value = fecha;
+            document.getElementById('miHorasInput').value = horas;
+            document.getElementById('miTareasInput').value = tareas;
+            document.getElementById('contenedorFechaFin').classList.add('hidden');
+            const btn = document.getElementById('btnSubmitParte');
+            btn.textContent = '💾 Actualizar';
+            document.getElementById('btnCancelarEdicion').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
 
-            const nuevasTareas = prompt("Modificar descripción de tareas:", tareasActuales);
-            if (nuevasTareas === null) return;
+        function cancelarEdicion() {
+            editandoIdParte = null;
+            document.getElementById('formParte').reset();
+            document.getElementById('miFechaInicio').value = new Date().toISOString().split('T')[0];
+            document.getElementById('buscadorObraImputacion').value = '';
+            document.getElementById('miObraSelect').value = '';
+            document.getElementById('contenedorFechaFin').classList.remove('hidden');
+            const btn = document.getElementById('btnSubmitParte');
+            btn.textContent = '🚀 Guardar';
+            document.getElementById('btnCancelarEdicion').classList.add('hidden');
+            document.getElementById('mensajeFeedback').classList.add('hidden');
+        }
 
-            let listaTextoObras = listaObrasGlobal.map(o => `${o.id_obra} -> ${o.nombre}`).join('\n');
-            const nuevaObra = prompt(`Introduce el ID de la nueva obra:\n\n${listaTextoObras}`, obraActual);
-            if (nuevaObra === null) return;
+        async function enviarMiParte(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSubmitParte'); 
+            const feedback = document.getElementById('mensajeFeedback');
+            let idObra = document.getElementById('miObraSelect').value;
+            const textoObra = document.getElementById('buscadorObraImputacion').value.trim();
+            const fechaInicio = document.getElementById('miFechaInicio').value;
+            const fechaFin = document.getElementById('miFechaFin').value;
+            const totalHoras = parseFloat(document.getElementById('miHorasInput').value);
+            const tareas = document.getElementById('miTareasInput').value;
+            const idUsuario = localStorage.getItem('usuario_id');
+            
+            if (!idObra) {
+                const encontrada = listaObrasJefeGlobal.find(o => o.nombre.toLowerCase().trim() === textoObra.toLowerCase());
+                if (encontrada) idObra = encontrada.id_obra;
+            }
 
-            const horasLimpias = parseFloat(nuevasHoras.replace(',', '.'));
-            const obraLimpia = parseInt(nuevaObra);
+            if (!idObra) {
+                alert('⚠️ Por favor, selecciona una obra válida de la lista desplegable.');
+                return;
+            }
 
-            if (isNaN(horasLimpias) || isNaN(obraLimpia)) {
-                alert('❌ Datos incorrectos. Revisa las horas o el ID de obra.');
+            btn.disabled = true; feedback.classList.add('hidden');
+            
+            try {
+                if (editandoIdParte) {
+                    const res = await fetch(`/api/partes/${editandoIdParte}`, { 
+                        method: 'PUT', headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ horas: totalHoras, tareas, id_obra: idObra, fecha: fechaInicio }) 
+                    });
+                    if ((await res.json()).success) {
+                        feedback.textContent = '✅ Actualizado correctamente'; 
+                        feedback.className = 'p-3 text-xs font-semibold rounded text-center bg-green-50 text-green-700 block mt-4';
+                        cancelarEdicion(); 
+                        cargarMiResumenMensual(); 
+                    }
+                } else {
+                    const detalleTareas = fechaFin && fechaFin !== fechaInicio 
+                        ? `[Del ${fechaInicio} al ${fechaFin}] ${tareas}` 
+                        : tareas;
+
+                    const res = await fetch('/api/partes', { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ 
+                            id_usuario: idUsuario, 
+                            id_obra: idObra, 
+                            fecha: fechaInicio, 
+                            horas: totalHoras, 
+                            tareas: detalleTareas 
+                        }) 
+                    });
+
+                    const data = await res.json();
+                    if (data.success) {
+                        feedback.textContent = '✅ Parte guardado con éxito.'; 
+                        feedback.className = 'p-3 text-xs font-semibold rounded text-center bg-green-50 text-green-700 block mt-4';
+                        document.getElementById('miTareasInput').value = '';
+                        document.getElementById('miFechaFin').value = '';
+                        document.getElementById('buscadorObraImputacion').value = '';
+                        document.getElementById('miObraSelect').value = '';
+                        cargarMiResumenMensual();
+                    } else {
+                        feedback.textContent = '❌ Error al guardar el parte.'; 
+                        feedback.className = 'p-3 text-xs font-semibold rounded text-center bg-red-50 text-red-700 block mt-4';
+                    }
+                }
+            } catch (error) { 
+                console.error(error);
+                feedback.textContent = '❌ Error de conexión.'; 
+                feedback.className = 'p-3 text-xs font-semibold rounded text-center bg-red-50 text-red-700 block mt-4';
+            }
+            btn.disabled = false;
+        }
+
+        async function cargarMiResumenMensual() {
+            const id_usuario = localStorage.getItem('usuario_id');
+            const fechaInicio = document.getElementById('historialFechaInicio').value;
+            const fechaFin = document.getElementById('historialFechaFin').value;
+
+            if (!fechaInicio || !fechaFin) return;
+
+            try {
+                const res = await fetch(`/api/admin/partes-filtrados?id_usuario=${id_usuario}&fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`);
+                const data = await res.json();
+                if (data.success) {
+                    const tbody = document.getElementById('tbodyResumen'); tbody.innerHTML = '';
+                    const contenedorHistorial = document.getElementById('listaMisPartesRaw'); contenedorHistorial.innerHTML = '';
+                    
+                    if(data.partes.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="3" class="p-3 text-center text-gray-500 text-sm">Sin horas en este rango.</td></tr>';
+                        contenedorHistorial.innerHTML = '<div class="p-3 text-center text-gray-500 text-xs">Sin historial para las fechas seleccionadas.</div>';
+                        document.getElementById('totalHorasMes').textContent = '0h'; return;
+                    }
+
+                    const mapObras = {}; let totalMes = 0;
+                    data.partes.forEach(p => {
+                        const h = parseFloat(p.horas || 0); totalMes += h;
+                        if(!mapObras[p.obra_nombre]) mapObras[p.obra_nombre] = 0;
+                        mapObras[p.obra_nombre] += h;
+                        
+                        const horasLimpias = Number(p.horas).toLocaleString('es-ES', { maximumFractionDigits: 1 });
+
+                        contenedorHistorial.innerHTML += `
+                            <div class="flex justify-between items-center bg-gray-50 p-3 border rounded-lg gap-2">
+                                <div class="overflow-hidden">
+                                    <div class="font-bold text-[#004b87] text-sm truncate">${p.obra_nombre} (${horasLimpias}h)</div>
+                                    <div class="text-[11px] text-gray-400">${p.fecha_registro} | ${p.tareas}</div>
+                                </div>
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <button type="button" onclick="iniciarEdicion(${p.id_parte}, '${p.id_obra}', '${p.obra_nombre.replace(/'/g, "\\'")}', '${p.fecha.split('T')[0]}', ${p.horas}, '${p.tareas.replace(/'/g, "\\'")}')" class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded text-xs font-bold transition hover:bg-blue-200" title="Editar parte">✏️</button>
+                                    <button type="button" onclick="eliminarParte(${p.id_parte})" class="bg-red-100 text-red-700 px-2.5 py-1 rounded text-xs font-bold transition hover:bg-red-200" title="Eliminar parte">🗑️</button>
+                                </div>
+                            </div>`;
+                    });
+
+                    for(const [obra, horas] of Object.entries(mapObras)) {
+                        const horasObraRedondeadas = Number(horas.toFixed(1));
+                        const porcentaje = totalMes > 0 ? ((horas / totalMes) * 100).toFixed(1) : 0;
+                        tbody.innerHTML += `<tr class="border-b"><td class="p-3 font-semibold text-[#004b87] text-xs">${obra}</td><td class="p-3 text-center text-sm">${horasObraRedondeadas}h</td><td class="p-3 text-center font-bold text-sm bg-yellow-50">${porcentaje}%</td></tr>`;
+                    }
+                    
+                    const totalMesRedondeado = Number(totalMes.toFixed(1));
+                    document.getElementById('totalHorasMes').textContent = totalMesRedondeado + 'h';
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function eliminarParte(idParte) {
+            if (!confirm("⚠️ ¿Estás totalmente seguro de que deseas eliminar este parte de trabajo? Esta acción no se puede deshacer.")) {
                 return;
             }
 
             try {
-                const respuesta = await fetch(`/api/partes/${idParte}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ horas: horasLimpias, tareas: nuevasTareas, id_obra: obraLimpia })
+                const res = await fetch(`/api/partes/${idParte}`, {
+                    method: 'DELETE'
                 });
-
-                const resultado = await respuesta.json();
+                
+                const resultado = await res.json();
                 if (resultado.success) {
-                    alert('✅ ¡Parte modificado correctamente!');
-                    const idEncargado = localStorage.getItem('usuario_id');
-                    await cargarPartesCuadrilla(idEncargado);
+                    alert('✅ Parte eliminado correctamente.');
+                    cargarMiResumenMensual();
                 } else {
-                    alert('❌ Error al modificar el parte.');
+                    alert('❌ Error al eliminar el parte: ' + (resultado.error || 'Desconocido'));
                 }
             } catch (error) {
-                console.error('Error de conexión al editar:', error);
-                alert('❌ No se pudo conectar con el servidor.');
+                console.error('Error de conexión al eliminar:', error);
+                alert('❌ No se pudo conectar con el servidor para eliminar el registro.');
             }
         }
 
-        async function enviarParteEncargado(e) {
-            e.preventDefault();
-            const btn = document.getElementById('btnEnviar');
-            const feedback = document.getElementById('mensajeFeedback');
-            const idEncargado = localStorage.getItem('usuario_id');
-
-            const payload = {
-                id_usuario: document.getElementById('selectOperario').value,
-                id_obra: document.getElementById('selectObra').value,
-                fecha: document.getElementById('inputFecha').value,
-                horas: document.getElementById('inputHoras').value,
-                tareas: document.getElementById('inputTareas').value
-            };
-
-            btn.disabled = true;
-            btn.textContent = 'Enviando...';
-            feedback.classList.add('hidden');
-
-            try {
-                const res = await fetch('/api/partes', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-
-                if (data.success) {
-                    feedback.textContent = '✅ Parte registrado con éxito';
-                    feedback.className = 'p-2 text-xs font-semibold rounded text-center bg-green-50 text-green-700 block mb-2';
-                    document.getElementById('inputTareas').value = '';
-                    await cargarPartesCuadrilla(idEncargado); 
-                } else {
-                    feedback.textContent = '❌ Error: ' + (data.error || 'No se pudo guardar');
-                    feedback.className = 'p-2 text-xs font-semibold rounded text-center bg-red-50 text-red-700 block mb-2';
-                }
-            } catch (error) {
-                feedback.textContent = '❌ Error de conexión con el servidor.';
-                feedback.className = 'p-2 text-xs font-semibold rounded text-center bg-red-50 text-red-700 block mb-2';
-            }
-
-            btn.disabled = false;
-            btn.textContent = '🚀 Registrar Parte';
-        }
-
-        function cerrarSesion() { 
-            localStorage.clear(); 
-            window.location.replace('index.html'); 
-        }
+        function cerrarSesion() { localStorage.clear(); window.location.replace('index.html'); }
     </script>
 </body>
 </html>
