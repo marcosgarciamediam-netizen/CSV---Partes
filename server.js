@@ -560,7 +560,7 @@ app.get('/api/jefe/:id_jefe/obras', async (req, res) => {
 });
 
 // ==========================================
-// RUTA: Exportar Quincena en Formato Matricial Excel (.xls)
+// RUTA: Exportar Quincena en Formato Matricial Excel (.xls) - Con soporte de colores nativos Excel
 // ==========================================
 app.get('/api/admin/exportar', async (req, res) => {
   const { inicio, fin } = req.query;
@@ -623,7 +623,18 @@ app.get('/api/admin/exportar', async (req, res) => {
 
     let html = `
       <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/1999/xlink">
-      <head><meta charset="UTF-8"></head>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          .rojo { background-color: #ff0000; mso-background-alt: #ff0000; color: #ffffff; font-weight: bold; text-align: center; }
+          .vacaciones { background-color: #ffc0cb; mso-background-alt: #ffc0cb; color: #990033; font-weight: bold; text-align: center; }
+          .baja { background-color: #90ee90; mso-background-alt: #90ee90; color: #003300; font-weight: bold; text-align: center; }
+          .permiso { background-color: #add8e6; mso-background-alt: #add8e6; color: #000066; font-weight: bold; text-align: center; }
+          .trabajo { text-align: center; font-weight: normal; }
+          .cabecera-principal { background-color: #f2f2f2; mso-background-alt: #f2f2f2; font-weight: bold; }
+          .cabecera-obra { background-color: #d9edf7; mso-background-alt: #d9edf7; font-weight: bold; color: #004b87; }
+        </style>
+      </head>
       <body>
     `;
 
@@ -632,7 +643,7 @@ app.get('/api/admin/exportar', async (req, res) => {
       html += `<table border="1" style="border-collapse: collapse; font-family: sans-serif; font-size: 10pt; margin-bottom: 20px;">`;
       
       // Cabecera de letras de días
-      html += `<tr style="background-color: #f2f2f2; font-weight: bold;">`;
+      html += `<tr class="cabecera-principal">`;
       html += `<th>Código</th><th>Operario</th><th>Categoría</th><th>Obra</th>`;
       diasArray.forEach(d => {
         const letra = letrasDiasMap[d.getDay()];
@@ -641,13 +652,13 @@ app.get('/api/admin/exportar', async (req, res) => {
       html += `<th>Total Horas</th></tr>`;
 
       // Cabecera de números de días
-      html += `<tr style="background-color: #f2f2f2; font-weight: bold;">`;
-      html += `<th colspan="4" style="text-align: left; background-color: #d9edf7;">${obra.nombre}</th>`;
+      html += `<tr class="cabecera-obra">`;
+      html += `<th colspan="4" style="text-align: left;">${obra.nombre}</th>`;
       diasArray.forEach(d => {
         const diaNum = d.getDate();
-        html += `<th style="text-align: center; background-color: #d9edf7;">${diaNum}</th>`;
+        html += `<th style="text-align: center;">${diaNum}</th>`;
       });
-      html += `<th style="background-color: #d9edf7;"></th></tr>`;
+      html += `<th></th></tr>`;
 
       Object.values(obra.operarios).forEach(op => {
         html += `<tr>`;
@@ -662,17 +673,38 @@ app.get('/api/admin/exportar', async (req, res) => {
           const esFinDeSemana = d.getDay() === 0 || d.getDay() === 6;
           const celdaData = op.dias[fStr];
 
-          let bg = esFinDeSemana ? 'background-color: #ff0000; color: white;' : '';
+          let claseCSS = '';
           let contenido = '';
 
-          if (celdaData) {
-            if (celdaData.tipo === 'vacaciones') { bg = 'background-color: #ffc0cb; font-weight: bold; text-align: center;'; contenido = 'V'; }
-            else if (celdaData.tipo === 'baja') { bg = 'background-color: #90ee90; font-weight: bold; text-align: center;'; contenido = 'B'; }
-            else if (celdaData.tipo === 'paternidad') { bg = 'background-color: #add8e6; font-weight: bold; text-align: center;'; contenido = 'P'; }
-            else if (celdaData.tipo === 'permiso') { bg = 'background-color: #add8e6; font-weight: bold; text-align: center;'; contenido = celdaData.val; sumaOp += parseFloat(celdaData.val || 0); }
-            else { bg = 'text-align: center;'; contenido = celdaData.val; sumaOp += parseFloat(celdaData.val || 0); }
+          if (esFinDeSemana) {
+            claseCSS = 'rojo';
           }
-          html += `<td style="${bg}">${contenido}</td>`;
+
+          if (celdaData) {
+            if (celdaData.tipo === 'vacaciones') { 
+              claseCSS = 'vacaciones'; 
+              contenido = 'V'; 
+            }
+            else if (celdaData.tipo === 'baja') { 
+              claseCSS = 'baja'; 
+              contenido = 'B'; 
+            }
+            else if (celdaData.tipo === 'paternidad') { 
+              claseCSS = 'permiso'; 
+              contenido = 'P'; 
+            }
+            else if (celdaData.tipo === 'permiso') { 
+              claseCSS = 'permiso'; 
+              contenido = celdaData.val; 
+              sumaOp += parseFloat(celdaData.val || 0); 
+            }
+            else { 
+              claseCSS = 'trabajo'; 
+              contenido = celdaData.val; 
+              sumaOp += parseFloat(celdaData.val || 0); 
+            }
+          }
+          html += `<td class="${claseCSS}">${contenido}</td>`;
         });
 
         totalHorasObra += sumaOp;
@@ -681,7 +713,7 @@ app.get('/api/admin/exportar', async (req, res) => {
       });
 
       // Fila Total Obra
-      html += `<tr style="background-color: #d9edf7; font-weight: bold;"><td colspan="${4 + diasArray.length}" style="color: #004b87;">Total ${obra.nombre}</td><td style="text-align: right; color: #004b87;">${totalHorasObra.toFixed(1).replace('.', ',')}</td></tr>`;
+      html += `<tr class="cabecera-obra"><td colspan="${4 + diasArray.length}" style="text-align: left;">Total ${obra.nombre}</td><td style="text-align: right;">${totalHorasObra.toFixed(1).replace('.', ',')}</td></tr>`;
       html += `</table><br/>`;
     });
 
