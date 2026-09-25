@@ -357,45 +357,26 @@
                 <!-- 7. VISTA: DEDICACIÓN MENSUAL DE JEFES DE OBRA -->
                 <section id="seccion-dedicacion" class="vista-panel hidden space-y-6">
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-6">
-                        <div>
-                            <h2 class="text-lg font-bold text-[#004b87] mb-1">Dedicación Mensual y por Rango de Jefes de Obra</h2>
-                            <p class="text-xs text-gray-600">Visualiza el resumen de porcentaje imputado por cada jefe y selecciona el rango de fechas para descargar su Excel detallado.</p>
-                        </div>
-
-                        <!-- Panel Resumen de Jefes -->
-                        <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-3">
-                            <div class="flex justify-between items-center">
-                                <h3 class="text-xs font-bold uppercase text-[#004b87]">Resumen de Actividad de Jefes</h3>
-                                <button onclick="cargarResumenJefes()" class="text-xs font-bold text-[#004b87] hover:underline">🔄 Actualizar Resumen</button>
-                            </div>
-                            <div id="panelResumenJefes" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                <div class="text-xs text-gray-500">Cargando métricas de jefes...</div>
-                            </div>
-                        </div>
-
-                        <!-- Bloque de Exportación por Rango de Fechas -->
-                        <div class="max-w-xl space-y-4 pt-4 border-t border-gray-200">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-4">
                             <div>
-                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Seleccionar Jefe de Obra</label>
-                                <select id="selectJefeDedicacion" class="w-full border border-gray-300 p-2.5 rounded-lg bg-gray-50 text-sm outline-none font-semibold">
-                                    <option value="">-- Selecciona un Jefe de Obra --</option>
-                                </select>
+                                <h2 class="text-lg font-bold text-[#004b87] mb-1">Dedicación y Progreso Mensual de Jefes de Obra</h2>
+                                <p class="text-xs text-gray-600">Panel global de control y seguimiento de la dedicación de todos los Jefes de Obra activos.</p>
                             </div>
-
-                            <div class="grid grid-cols-2 gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <div class="flex items-center gap-2 bg-yellow-50 p-2 rounded-lg border border-yellow-200">
                                 <div>
-                                    <label class="block text-[10px] font-bold uppercase text-[#004b87]">Desde Fecha</label>
-                                    <input type="date" id="dedicacionFechaInicio" onchange="cargarResumenJefes()" class="w-full border border-gray-300 p-1.5 rounded bg-white text-xs outline-none" />
+                                    <label class="block text-[9px] font-bold uppercase text-[#004b87]">Desde</label>
+                                    <input type="date" id="dedicacionFechaInicio" onchange="cargarPanelJefesDedicacion()" class="border border-gray-300 p-1 rounded bg-white text-xs outline-none" />
                                 </div>
                                 <div>
-                                    <label class="block text-[10px] font-bold uppercase text-[#004b87]">Hasta Fecha</label>
-                                    <input type="date" id="dedicacionFechaFin" onchange="cargarResumenJefes()" class="w-full border border-gray-300 p-1.5 rounded bg-white text-xs outline-none" />
+                                    <label class="block text-[9px] font-bold uppercase text-[#004b87]">Hasta</label>
+                                    <input type="date" id="dedicacionFechaFin" onchange="cargarPanelJefesDedicacion()" class="border border-gray-300 p-1 rounded bg-white text-xs outline-none" />
                                 </div>
                             </div>
+                        </div>
 
-                            <button onclick="descargarDedicacionJefeRango()" class="w-full bg-[#004b87] text-white font-bold text-sm py-3 rounded-lg shadow hover:bg-blue-900 transition flex items-center justify-center gap-2">
-                                📥 Descargar Excel de Dedicación Filtrado
-                            </button>
+                        <!-- Contenedor Dinámico: Tarjetas por cada Jefe de Obra -->
+                        <div id="contenedorTarjetasJefes" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="p-4 bg-gray-50 rounded-xl text-sm text-gray-500">Cargando Jefes de Obra y métricas...</div>
                         </div>
                     </div>
                 </section>
@@ -483,7 +464,7 @@
             'usuarios': 'Gestión de Usuarios',
             'asignaciones': 'Gestión de Asignaciones',
             'quincena': 'Exportación Quincenal',
-            'dedicacion': 'Dedicación Mensual de Jefes de Obra'
+            'dedicacion': 'Dedicación Jefes de Obra'
         };
 
         let todosLosUsuariosGlobal = [];
@@ -1088,19 +1069,7 @@
         }
 
         async function cargarJefesDedicacion() {
-            try {
-                const res = await fetch('/api/admin/usuarios-todos');
-                const data = await res.json();
-                if (data.success) {
-                    const select = document.getElementById('selectJefeDedicacion');
-                    select.innerHTML = '<option value="">-- Selecciona un Jefe de Obra --</option>';
-                    data.usuarios.forEach(u => {
-                        if (u.rol === 'jefe_de_obra' || u.rol === 'jefedeobra' || u.rol === 'admin') {
-                            select.innerHTML += `<option value="${u.id_usuario}">${u.nombre} (${u.rol.toUpperCase()})</option>`;
-                        }
-                    });
-                }
-                
+            if (!document.getElementById('dedicacionFechaInicio').value) {
                 const hoy = new Date();
                 const anio = hoy.getFullYear();
                 const mes = hoy.getMonth();
@@ -1110,53 +1079,93 @@
 
                 document.getElementById('dedicacionFechaInicio').value = primerDia;
                 document.getElementById('dedicacionFechaFin').value = ultimoDia;
+            }
 
-                cargarResumenJefes();
-            } catch(e) { console.error("Error cargando jefes para dedicación:", e); }
+            await cargarPanelJefesDedicacion();
         }
 
-        async function cargarResumenJefes() {
+        async function cargarPanelJefesDedicacion() {
             const inicio = document.getElementById('dedicacionFechaInicio').value;
             const fin = document.getElementById('dedicacionFechaFin').value;
-            const contenedor = document.getElementById('panelResumenJefes');
-            contenedor.innerHTML = '<div class="text-xs text-gray-500">Calculando porcentajes...</div>';
+            const contenedor = document.getElementById('contenedorTarjetasJefes');
+            contenedor.innerHTML = '<div class="text-xs text-gray-500 p-4">Actualizando datos de los jefes de obra...</div>';
 
             if (!inicio || !fin) return;
 
             try {
-                const res = await fetch(`/api/admin/resumen-jefes-dedicacion?inicio=${inicio}&fin=${fin}`);
-                const data = await res.json();
-                if (data.success) {
-                    contenedor.innerHTML = '';
-                    let sumaHorasGlobales = data.resumen.reduce((acc, curr) => acc + curr.total_horas, 0);
+                const resUsers = await fetch('/api/admin/usuarios-todos');
+                const dataUsers = await resUsers.json();
+                
+                if (!dataUsers.success) return;
 
-                    if (data.resumen.length === 0) {
-                        contenedor.innerHTML = '<div class="text-xs text-gray-400">No hay jefes de obra registrados.</div>';
-                        return;
-                    }
+                const jefes = dataUsers.usuarios.filter(u => (u.rol === 'jefe_de_obra' || u.rol === 'jefedeobra' || u.rol === 'admin') && u.activo);
 
-                    data.resumen.forEach(j => {
-                        const porcentajeGlobal = sumaHorasGlobales > 0 ? ((j.total_horas / sumaHorasGlobales) * 100).toFixed(1) : '0.0';
-                        contenedor.innerHTML += `
-                            <div class="bg-white p-3 rounded-lg border border-blue-200 shadow-sm flex flex-col justify-between">
-                                <div class="font-bold text-gray-800 text-xs">${j.nombre}</div>
-                                <div class="flex justify-between items-end mt-2">
-                                    <span class="text-xs text-gray-500">${j.total_horas}h supervisadas</span>
-                                    <span class="text-sm font-extrabold text-[#004b87]">${porcentajeGlobal}%</span>
+                if (jefes.length === 0) {
+                    contenedor.innerHTML = '<div class="text-xs text-gray-400 p-4">No hay Jefes de Obra activos en el sistema.</div>';
+                    return;
+                }
+
+                const resResumen = await fetch(`/api/admin/resumen-jefes-dedicacion?inicio=${inicio}&fin=${fin}`);
+                const dataResumen = await resResumen.json();
+                const mapaHorasJefes = {};
+                if (dataResumen.success) {
+                    dataResumen.resumen.forEach(r => { mapaHorasJefes[r.id_usuario] = r.total_horas; });
+                }
+
+                const horasObjetivoMes = 160; 
+                contenedor.innerHTML = '';
+
+                for (const jefe of jefes) {
+                    const horasSupervisadas = mapaHorasJefes[jefe.id_usuario] || 0;
+                    const porcentajeProgreso = Math.min(Math.round((horasSupervisadas / horasObjetivoMes) * 100), 100);
+                    
+                    let colorBarra = 'bg-blue-600';
+                    if (porcentajeProgreso >= 80) colorBarra = 'bg-green-600';
+                    else if (porcentajeProgreso < 30) colorBarra = 'bg-amber-500';
+
+                    const tarjeta = document.createElement('div');
+                    tarjeta.className = 'bg-white p-5 rounded-2xl shadow-sm border border-gray-200 space-y-4 flex flex-col justify-between';
+                    tarjeta.innerHTML = `
+                        <div>
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <h3 class="font-extrabold text-[#004b87] text-base">${jefe.nombre}</h3>
+                                    <span class="text-[10px] uppercase font-bold bg-yellow-100 text-[#004b87] px-2 py-0.5 rounded">${jefe.rol.replace(/_/g, ' ')}</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-xl font-black text-gray-900">${horasSupervisadas}h</span>
+                                    <div class="text-[10px] text-gray-400">Total Imputadas</div>
                                 </div>
                             </div>
-                        `;
-                    });
+
+                            <div class="space-y-1 pt-2">
+                                <div class="flex justify-between text-xs font-semibold text-gray-600">
+                                    <span>Progreso objetivo mensual (${horasObjetivoMes}h)</span>
+                                    <span class="text-[#004b87] font-bold">${porcentajeProgreso}%</span>
+                                </div>
+                                <div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                                    <div class="${colorBarra} h-2.5 rounded-full transition-all duration-500" style="width: ${porcentajeProgreso}%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-gray-100 flex justify-between items-center">
+                            <span class="text-[11px] text-gray-500 font-medium">Período: ${inicio} al ${fin}</span>
+                            <button onclick="descargarDedicacionJefeIndividual(${jefe.id_usuario})" class="bg-[#004b87] hover:bg-blue-900 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition flex items-center gap-1.5">
+                                <span>📥</span> Descargar Excel
+                            </button>
+                        </div>
+                    `;
+                    contenedor.appendChild(tarjeta);
                 }
-            } catch(e) { console.error(e); }
+
+            } catch(e) { console.error("Error cargando panel de jefes:", e); }
         }
 
-        function descargarDedicacionJefeRango() {
-            const idJefe = document.getElementById('selectJefeDedicacion').value;
+        function descargarDedicacionJefeIndividual(idJefe) {
             const inicio = document.getElementById('dedicacionFechaInicio').value;
             const fin = document.getElementById('dedicacionFechaFin').value;
 
-            if (!idJefe) { alert('⚠️ Por favor, selecciona un Jefe de Obra.'); return; }
             if (!inicio || !fin) { alert('⚠️ Selecciona un rango de fechas válido.'); return; }
 
             window.location.href = `/api/admin/exportar-dedicacion-jefe/${idJefe}?inicio=${inicio}&fin=${fin}`;
