@@ -132,7 +132,7 @@ app.put('/api/partes/:id_parte', async (req, res) => {
   try {
     const query = `
       UPDATE partes_trabajo 
-      SET horas = $1, tareas = $2, id_obra = $3, fecha = $4
+      SET horas = $1, tareas = $2, id_obra = $3, fecha = COALESCE($4, fecha)
       WHERE id_parte = $5
       RETURNING *;
     `;
@@ -460,17 +460,6 @@ app.post('/api/admin/asignaciones-plantilla', async (req, res) => {
   }
 });
 
-app.delete('/api/admin/asignaciones-plantilla/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-    await pool.query('DELETE FROM asignacion_plantilla WHERE id_asignacion = $1', [id]);
-    res.json({ success: true, mensaje: '¡Asignación eliminada!' });
-  } catch (error) {
-    console.error('Error al eliminar asignación:', error);
-    res.status(500).json({ success: false, error: 'Error interno en el servidor' });
-  }
-});
-
 app.post('/api/admin/asignaciones-plantilla-multiples', async (req, res) => {
   const { id_encargado, ids_operarios } = req.body;
 
@@ -495,6 +484,17 @@ app.post('/api/admin/asignaciones-plantilla-multiples', async (req, res) => {
     res.json({ success: true, mensaje: '¡Asignación múltiple completada con éxito!' });
   } catch (error) {
     console.error('Error en asignación múltiple:', error);
+    res.status(500).json({ success: false, error: 'Error interno en el servidor' });
+  }
+});
+
+app.delete('/api/admin/asignaciones-plantilla/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM asignacion_plantilla WHERE id_asignacion = $1', [id]);
+    res.json({ success: true, mensaje: '¡Asignación eliminada!' });
+  } catch (error) {
+    console.error('Error al eliminar asignación:', error);
     res.status(500).json({ success: false, error: 'Error interno en el servidor' });
   }
 });
@@ -563,148 +563,146 @@ app.get('/api/jefe/:id_jefe/obras', async (req, res) => {
 });
 
 // ==========================================
-// ENCENDIDO DEL SERVIDOR
-// ==========================================
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor backend escuchando en el puerto ${PORT}`);
-});
-
-async function guardarEdicionParteModal() {
-            const idParte = document.getElementById('modalIdParte').value;
-            const horas = parseFloat(document.getElementById('modalHoras').value);
-            const tareas = document.getElementById('modalTareas').value;
-            let id_obra = document.getElementById('modalIdObraSeleccionada').value;
-
-            // Si el ID de obra está vacío, buscamos por texto exacto
-            if (!id_obra) {
-                const textoEscrito = document.getElementById('buscadorObraInput').value.trim();
-                const obraEncontrada = listaObrasGlobalAdmin.find(o => o.nombre.toLowerCase().trim() === textoEscrito.toLowerCase());
-                if (obraEncontrada) {
-                    id_obra = obraEncontrada.id_obra;
-                }
-            }
-
-            if (isNaN(horas) || !id_obra) {
-                alert('❌ Revisa que las horas sean correctas y hayas seleccionado una obra válida de la lista.');
-                return;
-            }
-
-            // Enviamos exactamente las propiedades que el servidor procesa para el parte
-            const payload = { 
-                horas: horas, 
-                tareas: tareas, 
-                id_obra: parseInt(id_obra) 
-            };
-
-            try {
-                const respuesta = await fetch(`/api/partes/${idParte}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const resultado = await respuesta.json();
-
-                if (resultado.success) {
-                    alert('✅ ¡Parte modificado correctamente!');
-                    cerrarModalEdicion();
-                    await buscarPartesFiltrados();
-                } else {
-                    alert('❌ Error del servidor: ' + (resultado.error || 'No se pudo modificar el parte.'));
-                }
-            } catch (error) {
-                console.error('Error de red al editar el parte:', error);
-                alert('❌ No se pudo conectar con el servidor.');
-            }
-        }
-
-
-        
-// ==========================================
-// RUTA: Exportar Quincena con estilos de colores para Excel (.xls)
+// RUTA: Exportar Quincena en Formato Matricial Excel (.xls)
 // ==========================================
 app.get('/api/admin/exportar', async (req, res) => {
   const { inicio, fin } = req.query;
 
+  if (!inicio || !fin) {
+    return res.status(400).send('Faltan fechas de inicio y fin.');
+  }
+
   try {
-    let query = `
-      SELECT 
-        u.codigo_operario AS codigo,
-        u.nombre AS trabajador,
-        u.categoria AS categoria,
-        o.nombre AS obra,
-        TO_CHAR(pt.fecha, 'DD/MM/YYYY') AS fecha,
-        pt.horas,
-        pt.tareas,
-        COALESCE(pt.tipo, 'trabajo') AS tipo
+    const dIni = new Date(inicio);
+    const dFin = new Date(fin);
+    const diasArray = [];
+    let curr = new Date(dIni);
+    while (curr <= dFin) {
+      diasArray.push(new Date(curr));
+      curr.setDate(curr.getDate() + 1);
+    }
+
+    const query = `
+      SELECT pt.id_usuario, u.codigo_operario, u.nombre AS operario_nombre, u.categoria,
+             pt.id_obra, o.nombre AS obra_nombre, pt.fecha, pt.horas, COALESCE(pt.tipo, 'trabajo') AS tipo
       FROM partes_trabajo pt
       JOIN usuarios u ON pt.id_usuario = u.id_usuario
       JOIN obras o ON pt.id_obra = o.id_obra
+      WHERE pt.fecha BETWEEN $1 AND $2
+      ORDER BY o.nombre ASC, u.nombre ASC, pt.fecha ASC;
     `;
+    const resultado = await pool.query(query, [inicio, fin]);
+    const partes = resultado.rows;
 
-    const params = [];
-    if (inicio && fin) {
-      query += ` WHERE pt.fecha BETWEEN $1 AND $2`;
-      params.push(inicio, fin);
-    }
+    const obrasMap = {};
+    partes.forEach(p => {
+      if (!obrasMap[p.id_obra]) {
+        obrasMap[p.id_obra] = { nombre: p.obra_nombre, operarios: {} };
+      }
+      const obraObj = obrasMap[p.id_obra];
+      if (!obraObj.operarios[p.id_usuario]) {
+        obraObj.operarios[p.id_usuario] = {
+          codigo: p.codigo_operario || '',
+          nombre: p.operario_nombre,
+          categoria: p.categoria || '',
+          obraNombre: p.obra_nombre,
+          dias: {},
+          totalHoras: 0
+        };
+      }
+      const opObj = obraObj.operarios[p.id_usuario];
+      const fechaStr = new Date(p.fecha).toISOString().split('T')[0];
+      
+      let val = p.horas;
+      let tipo = p.tipo;
+      if (tipo === 'vacaciones') val = 'V';
+      else if (tipo === 'baja') val = 'B';
+      else if (tipo === 'paternidad') val = 'P';
+      
+      opObj.dias[fechaStr] = { val, tipo };
+    });
 
-    query += ` ORDER BY pt.fecha ASC, u.nombre ASC;`;
-    const resultado = await pool.query(query, params);
+    const letrasDiasMap = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 
     let html = `
       <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/1999/xlink">
       <head><meta charset="UTF-8"></head>
       <body>
-      <table border="1">
-        <tr style="background-color: #004b87; color: white; font-weight: bold;">
-          <th>Código</th>
-          <th>Trabajador</th>
-          <th>Categoría</th>
-          <th>Obra</th>
-          <th>Fecha</th>
-          <th>Horas / Valor</th>
-          <th>Detalle / Tareas</th>
-        </tr>
     `;
 
-    resultado.rows.forEach(row => {
-      let bgColor = "transparent";
-      let valorCelda = row.horas;
+    Object.values(obrasMap).forEach(obra => {
+      let totalHorasObra = 0;
+      html += `<table border="1" style="border-collapse: collapse; font-family: sans-serif; font-size: 10pt; margin-bottom: 20px;">`;
+      
+      // Cabecera de letras de días
+      html += `<tr style="background-color: #f2f2f2; font-weight: bold;">`;
+      html += `<th>Código</th><th>Operario</th><th>Categoría</th><th>Obra</th>`;
+      diasArray.forEach(d => {
+        const letra = letrasDiasMap[d.getDay()];
+        html += `<th style="text-align: center;">${letra}</th>`;
+      });
+      html += `<th>Total Horas</th></tr>`;
 
-      if (row.tipo === 'vacaciones') {
-        bgColor = "#ffc0cb"; // Rosa
-        valorCelda = "8";
-      } else if (row.tipo === 'baja') {
-        bgColor = "#90ee90"; // Verde
-        valorCelda = "8";
-      } else if (row.tipo === 'permiso') {
-        bgColor = "#add8e6"; // Azul
-      } else if (row.tipo === 'paternidad') {
-        bgColor = "#e6e6fa"; // Lavanda / Neutro
-        valorCelda = "P";
-      }
+      // Cabecera de números de días
+      html += `<tr style="background-color: #f2f2f2; font-weight: bold;">`;
+      html += `<th colspan="4" style="text-align: left; background-color: #d9edf7;">${obra.nombre}</th>`;
+      diasArray.forEach(d => {
+        const diaNum = d.getDate();
+        html += `<th style="text-align: center; background-color: #d9edf7;">${diaNum}</th>`;
+      });
+      html += `<th style="background-color: #d9edf7;"></th></tr>`;
 
-      html += `
-        <tr>
-          <td>${row.codigo || ''}</td>
-          <td>${row.trabajador}</td>
-          <td>${row.categoria || ''}</td>
-          <td>${row.obra}</td>
-          <td>${row.fecha}</td>
-          <td style="background-color: ${bgColor}; text-align: center; font-weight: bold;">${valorCelda}</td>
-          <td>${row.tareas}</td>
-        </tr>
-      `;
+      Object.values(obra.operarios).forEach(op => {
+        html += `<tr>`;
+        html += `<td>${op.codigo}</td>`;
+        html += `<td><b>${op.nombre}</b></td>`;
+        html += `<td>${op.categoria}</td>`;
+        html += `<td>${op.obraNombre}</td>`;
+
+        let sumaOp = 0;
+        diasArray.forEach(d => {
+          const fStr = d.toISOString().split('T')[0];
+          const esFinDeSemana = d.getDay() === 0 || d.getDay() === 6;
+          const celdaData = op.dias[fStr];
+
+          let bg = esFinDeSemana ? 'background-color: #ff0000; color: white;' : '';
+          let contenido = '';
+
+          if (celdaData) {
+            if (celdaData.tipo === 'vacaciones') { bg = 'background-color: #ffc0cb; font-weight: bold; text-align: center;'; contenido = 'V'; }
+            else if (celdaData.tipo === 'baja') { bg = 'background-color: #90ee90; font-weight: bold; text-align: center;'; contenido = 'B'; }
+            else if (celdaData.tipo === 'paternidad') { bg = 'background-color: #add8e6; font-weight: bold; text-align: center;'; contenido = 'P'; }
+            else if (celdaData.tipo === 'permiso') { bg = 'background-color: #add8e6; font-weight: bold; text-align: center;'; contenido = celdaData.val; sumaOp += parseFloat(celdaData.val || 0); }
+            else { bg = 'text-align: center;'; contenido = celdaData.val; sumaOp += parseFloat(celdaData.val || 0); }
+          }
+          html += `<td style="${bg}">${contenido}</td>`;
+        });
+
+        totalHorasObra += sumaOp;
+        html += `<td style="text-align: right; font-weight: bold;">${sumaOp.toFixed(1).replace('.', ',')}</td>`;
+        html += `</tr>`;
+      });
+
+      // Fila Total Obra
+      html += `<tr style="background-color: #d9edf7; font-weight: bold;"><td colspan="${4 + diasArray.length}" style="color: #004b87;">Total ${obra.nombre}</td><td style="text-align: right; color: #004b87;">${totalHorasObra.toFixed(1).replace('.', ',')}</td></tr>`;
+      html += `</table><br/>`;
     });
 
-    html += `</table></body></html>`;
+    html += `</body></html>`;
 
     res.setHeader('Content-Type', 'application/vnd.ms-excel; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename=quincena_informe.xls');
+    res.setHeader('Content-Disposition', 'attachment; filename=informe_quincenal_matricial.xls');
     res.status(200).send(html);
 
   } catch (error) {
-    console.error('Error al exportar quincena:', error);
+    console.error('Error al exportar matriz quincenal:', error);
     res.status(500).json({ success: false, error: 'Error interno en el servidor' });
   }
+});
+
+// ==========================================
+// ENCENDIDO DEL SERVIDOR
+// ==========================================
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor backend escuchando en el puerto ${PORT}`);
 });
