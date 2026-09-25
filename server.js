@@ -945,7 +945,7 @@ app.get('/api/admin/exportar-dedicacion-jefe/:id_jefe', async (req, res) => {
   }
 });
 
-// Endpoint para obtener el resumen de horas imputadas por los Jefes de Obra en un rango de fechas
+// Endpoint para obtener el resumen de horas imputadas por los Jefes de Obra
 app.get('/api/admin/resumen-jefes-dedicacion', async (req, res) => {
     const { inicio, fin } = req.query;
     if (!inicio || !fin) {
@@ -953,16 +953,17 @@ app.get('/api/admin/resumen-jefes-dedicacion', async (req, res) => {
     }
 
     try {
+        // Probamos agrupando por id_usuario (si en tu tabla se llama id_operario, cámbialo aquí abajo)
         const [rows] = await pool.query(`
-            SELECT p.id_usuario, SUM(p.horas) as total_horas
-            FROM partes p
-            WHERE p.fecha BETWEEN ? AND ?
-            GROUP BY p.id_usuario
+            SELECT id_usuario, SUM(horas) as total_horas
+            FROM partes
+            WHERE fecha BETWEEN ? AND ?
+            GROUP BY id_usuario
         `, [inicio, fin]);
 
         res.json({ success: true, resumen: rows });
     } catch (error) {
-        console.error("Error al obtener resumen de jefes:", error);
+        console.error("Error SQL detallado en resumen-jefes:", error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
