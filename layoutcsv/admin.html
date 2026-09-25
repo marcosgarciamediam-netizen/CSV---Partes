@@ -1074,9 +1074,12 @@
             await cargarPanelJefesDedicacion();
         }
 
-        async function cargarPanelJefesDedicacion() {
+        async function cargarPanelJefesDedicacion(idJefeEspecifico = null) {
             const contenedor = document.getElementById('contenedorTarjetasJefes');
-            contenedor.innerHTML = '<div class="text-xs text-gray-500 p-4">Actualizando datos de los jefes de obra...</div>';
+            
+            if (!idJefeEspecifico) {
+                contenedor.innerHTML = '<div class="text-xs text-gray-500 p-4">Actualizando datos de los jefes de obra...</div>';
+            }
 
             const hoy = new Date();
             const anio = hoy.getFullYear();
@@ -1103,10 +1106,21 @@
                     return;
                 }
 
+                if (!idJefeEspecifico) {
+                    contenedor.innerHTML = '';
+                }
+
                 const horasObjetivoMes = 160; 
-                contenedor.innerHTML = '';
 
                 for (const jefe of jefes) {
+                    if (idJefeEspecifico && jefe.id_usuario != idJefeEspecifico) continue;
+
+                    let inicioInput = document.getElementById(`inicio_${jefe.id_usuario}`);
+                    let finInput = document.getElementById(`fin_${jefe.id_usuario}`);
+                    
+                    const rangoInicio = inicioInput ? inicioInput.value : defaultInicio;
+                    const rangoFin = finInput ? finInput.value : defaultFin;
+
                     let horasSupervisadas = 0;
                     try {
                         const resHoras = await fetch(`/api/admin/jefe-total-horas/${jefe.id_usuario}?fecha_inicio=${defaultInicio}&fecha_fin=${defaultFin}`);
@@ -1125,10 +1139,9 @@
                     else if (porcentajeProgreso < 30) colorBarra = 'bg-amber-500';
 
                     const horasLimpias = horasSupervisadas.toLocaleString('es-ES', { maximumFractionDigits: 1 });
+                    let tarjeta = document.getElementById(`tarjeta_jefe_${jefe.id_usuario}`);
 
-                    const tarjeta = document.createElement('div');
-                    tarjeta.className = 'bg-white p-5 rounded-2xl shadow-sm border border-gray-200 space-y-4 flex flex-col justify-between';
-                    tarjeta.innerHTML = `
+                    const htmlContenido = `
                         <div>
                             <div class="flex justify-between items-start mb-2">
                                 <div>
@@ -1153,12 +1166,31 @@
                         </div>
 
                         <div class="pt-4 border-t border-gray-100 space-y-3">
+                            <div class="grid grid-cols-2 gap-2 bg-yellow-50 p-2 rounded-lg border border-yellow-200">
+                                <div>
+                                    <label class="block text-[8px] font-bold uppercase text-[#004b87]">Desde</label>
+                                    <input type="date" id="inicio_${jefe.id_usuario}" value="${rangoInicio}" class="w-full border border-gray-300 p-1 rounded bg-white text-[11px] outline-none" />
+                                </div>
+                                <div>
+                                    <label class="block text-[8px] font-bold uppercase text-[#004b87]">Hasta</label>
+                                    <input type="date" id="fin_${jefe.id_usuario}" value="${rangoFin}" class="w-full border border-gray-300 p-1 rounded bg-white text-[11px] outline-none" />
+                                </div>
+                            </div>
                             <button onclick="descargarDedicacionJefeIndividual(${jefe.id_usuario})" class="w-full bg-[#004b87] hover:bg-blue-900 text-white font-bold text-xs py-2.5 rounded-xl shadow transition flex items-center justify-center gap-1.5">
-                                <span>📥</span> Descargar Excel de Dedicación del Mes
+                                <span>📥</span> Descargar Excel de Dedicación
                             </button>
                         </div>
                     `;
-                    contenedor.appendChild(tarjeta);
+
+                    if (tarjeta) {
+                        tarjeta.innerHTML = htmlContenido;
+                    } else {
+                        tarjeta = document.createElement('div');
+                        tarjeta.id = `tarjeta_jefe_${jefe.id_usuario}`;
+                        tarjeta.className = 'bg-white p-5 rounded-2xl shadow-sm border border-gray-200 space-y-4 flex flex-col justify-between';
+                        tarjeta.innerHTML = htmlContenido;
+                        contenedor.appendChild(tarjeta);
+                    }
                 }
 
             } catch(e) { 
@@ -1168,11 +1200,10 @@
         }
 
         function descargarDedicacionJefeIndividual(idJefe) {
-            const hoy = new Date();
-            const anio = hoy.getFullYear();
-            const mes = hoy.getMonth();
-            const inicio = `${anio}-${String(mes+1).padStart(2,'0')}-01`;
-            const fin = `${anio}-${String(mes+1).padStart(2,'0')}-${String(new Date(anio, mes+1, 0).getDate()).padStart(2,'0')}`;
+            const inicio = document.getElementById(`inicio_${idJefe}`).value;
+            const fin = document.getElementById(`fin_${idJefe}`).value;
+
+            if (!inicio || !fin) { alert('⚠️ Selecciona un rango de fechas válido.'); return; }
 
             window.location.href = `/api/admin/exportar-dedicacion-jefe/${idJefe}?inicio=${inicio}&fin=${fin}`;
         }
