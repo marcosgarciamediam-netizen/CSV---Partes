@@ -359,8 +359,8 @@
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-6">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-4">
                             <div>
-                                <h2 class="text-lg font-bold text-[#004b87] mb-1">Dedicación y Progreso Mensual de Jefes de Obra</h2>
-                                <p class="text-xs text-gray-600">Panel global de control y seguimiento de la dedicación de todos los Jefes de Obra activos.</p>
+                                <h2 class="text-lg font-bold text-[#004b87] mb-1">Dedicación y Progreso de Jefes de Obra</h2>
+                                <p class="text-xs text-gray-600">Listado de todos los jefes de obra activos, su progreso porcentual en los partes y selector de fechas para Excel.</p>
                             </div>
                             <div class="flex items-center gap-2 bg-yellow-50 p-2 rounded-lg border border-yellow-200">
                                 <div>
@@ -374,9 +374,9 @@
                             </div>
                         </div>
 
-                        <!-- Contenedor Dinámico: Tarjetas por cada Jefe de Obra -->
+                        <!-- Tarjetas por cada Jefe de Obra -->
                         <div id="contenedorTarjetasJefes" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="p-4 bg-gray-50 rounded-xl text-sm text-gray-500">Cargando Jefes de Obra y métricas...</div>
+                            <div class="p-4 bg-gray-50 rounded-xl text-sm text-gray-500">Cargando Jefes de Obra...</div>
                         </div>
                     </div>
                 </section>
@@ -973,7 +973,7 @@
                     dataUsers.usuarios.forEach(u => {
                         if (u.rol === 'encargado') selEncargado.innerHTML += `<option value="${u.id_usuario}">${u.nombre}</option>`;
                         if (u.rol === 'operario') selOperario.innerHTML += `<option value="${u.id_usuario}">${u.nombre} (${u.codigo_operario || 'Sin Cód'})</option>`;
-                        if (u.rol === 'jefe_de_obra' || u.rol === 'jefedeobra') selJefe.innerHTML += `<option value="${u.id_usuario}">${u.nombre}</option>`;
+                        if (u.rol === 'JEFE_DE_OBRA' || u.rol === 'jefe_de_obra' || u.rol === 'jefedeobra') selJefe.innerHTML += `<option value="${u.id_usuario}">${u.nombre}</option>`;
                     });
                 }
 
@@ -1096,12 +1096,19 @@
                 const resUsers = await fetch('/api/admin/usuarios-todos');
                 const dataUsers = await resUsers.json();
                 
-                if (!dataUsers.success) return;
+                if (!dataUsers.success) {
+                    contenedor.innerHTML = '<div class="text-xs text-red-500 p-4">Error al cargar la lista de usuarios.</div>';
+                    return;
+                }
 
-                const jefes = dataUsers.usuarios.filter(u => (u.rol === 'jefe_de_obra' || u.rol === 'jefedeobra' || u.rol === 'admin') && u.activo);
+                // Filtrar exclusivamente por el rol JEFE_DE_OBRA (activo)
+                const jefes = dataUsers.usuarios.filter(u => {
+                    const rol = (u.rol || '').toUpperCase().trim();
+                    return rol === 'JEFE_DE_OBRA' && u.activo;
+                });
 
                 if (jefes.length === 0) {
-                    contenedor.innerHTML = '<div class="text-xs text-gray-400 p-4">No hay Jefes de Obra activos en el sistema.</div>';
+                    contenedor.innerHTML = '<div class="text-xs text-gray-500 p-4">No hay Jefes de Obra activos en el sistema.</div>';
                     return;
                 }
 
@@ -1130,7 +1137,7 @@
                             <div class="flex justify-between items-start mb-2">
                                 <div>
                                     <h3 class="font-extrabold text-[#004b87] text-base">${jefe.nombre}</h3>
-                                    <span class="text-[10px] uppercase font-bold bg-yellow-100 text-[#004b87] px-2 py-0.5 rounded">${jefe.rol.replace(/_/g, ' ')}</span>
+                                    <span class="text-[10px] uppercase font-bold bg-yellow-100 text-[#004b87] px-2 py-0.5 rounded">JEFE DE OBRA</span>
                                 </div>
                                 <div class="text-right">
                                     <span class="text-xl font-black text-gray-900">${horasSupervisadas}h</span>
@@ -1159,7 +1166,10 @@
                     contenedor.appendChild(tarjeta);
                 }
 
-            } catch(e) { console.error("Error cargando panel de jefes:", e); }
+            } catch(e) { 
+                console.error("Error cargando panel de jefes:", e);
+                contenedor.innerHTML = '<div class="text-xs text-red-500 p-4">Error de conexión al cargar los datos.</div>';
+            }
         }
 
         function descargarDedicacionJefeIndividual(idJefe) {
