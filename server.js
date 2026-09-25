@@ -559,8 +559,10 @@ app.get('/api/jefe/:id_jefe/obras', async (req, res) => {
   }
 });
 
+const ExcelJS = require('exceljs');
+
 // ==========================================
-// RUTA: Exportar Quincena en Formato Matricial Excel (.xls) - Con soporte de colores nativos Excel
+// RUTA: Exportar Quincena en Formato Matricial Excel Real (.xlsx) con Colores
 // ==========================================
 app.get('/api/admin/exportar', async (req, res) => {
   const { inicio, fin } = req.query;
@@ -621,110 +623,141 @@ app.get('/api/admin/exportar', async (req, res) => {
 
     const letrasDiasMap = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 
-    let html = `
-      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/1999/xlink">
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          .rojo { background-color: #ff0000; mso-background-alt: #ff0000; color: #ffffff; font-weight: bold; text-align: center; }
-          .vacaciones { background-color: #ffc0cb; mso-background-alt: #ffc0cb; color: #990033; font-weight: bold; text-align: center; }
-          .baja { background-color: #90ee90; mso-background-alt: #90ee90; color: #003300; font-weight: bold; text-align: center; }
-          .permiso { background-color: #add8e6; mso-background-alt: #add8e6; color: #000066; font-weight: bold; text-align: center; }
-          .trabajo { text-align: center; font-weight: normal; }
-          .cabecera-principal { background-color: #f2f2f2; mso-background-alt: #f2f2f2; font-weight: bold; }
-          .cabecera-obra { background-color: #d9edf7; mso-background-alt: #d9edf7; font-weight: bold; color: #004b87; }
-        </style>
-      </head>
-      <body>
-    `;
+    // Crear libro de Excel con ExcelJS
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Informe Quincenal');
 
+    // Estilos reutilizables
+    const estiloBordeFino = {
+      top: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+      left: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+      bottom: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+      right: { style: 'thin', color: { argb: 'FFD3D3D3' } }
+    };
+
+    const estilosFondo = {
+      rojo: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } },       // Fines de semana
+      vacaciones: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC0CB' } }, // Rosa
+      baja: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF90EE90' } },       // Verde
+      permiso: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFADD8E6' } },    // Azul
+      cabecera: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } },
+      obraCab: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9EDF7' } }
+    };
+
+    // Recorrer las obras para pintar las tablas de manera consecutiva
     Object.values(obrasMap).forEach(obra => {
       let totalHorasObra = 0;
-      html += `<table border="1" style="border-collapse: collapse; font-family: sans-serif; font-size: 10pt; margin-bottom: 20px;">`;
-      
-      // Cabecera de letras de días
-      html += `<tr class="cabecera-principal">`;
-      html += `<th>Código</th><th>Operario</th><th>Categoría</th><th>Obra</th>`;
-      diasArray.forEach(d => {
-        const letra = letrasDiasMap[d.getDay()];
-        html += `<th style="text-align: center;">${letra}</th>`;
-      });
-      html += `<th>Total Horas</th></tr>`;
 
-      // Cabecera de números de días
-      html += `<tr class="cabecera-obra">`;
-      html += `<th colspan="4" style="text-align: left;">${obra.nombre}</th>`;
-      diasArray.forEach(d => {
-        const diaNum = d.getDate();
-        html += `<th style="text-align: center;">${diaNum}</th>`;
-      });
-      html += `<th></th></tr>`;
+      // 1. Fila de Letras de Días
+      const filaLetras = ['Código', 'Operario', 'Categoría', 'Obra'];
+      diasArray.forEach(d => filaLetras.push(letrasDiasMap[d.getDay()]));
+      filaLetras.push('Total Horas');
 
+      const rLetras = sheet.addRow(filaLetras);
+      rLetras.font = { bold: true };
+      rLetras.eachCell((cell) => {
+        cell.fill = estilosFondo.cabecera;
+        cell.border = estiloBordeFino;
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      });
+
+      // 2. Fila de Números de Días con Nombre de Obra
+      const filaNumeros = [obra.nombre, '', '', ''];
+      diasArray.forEach(d => filaNumeros.push(d.getDate()));
+      filaNumeros.push('');
+
+      const rNum = sheet.addRow(filaNumeros);
+      rNum.font = { bold: true, color: { argb: 'FF004B87' } };
+      rNum.eachCell((cell) => {
+        cell.fill = estilosFondo.obraCab;
+        cell.border = estiloBordeFino;
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      });
+      // Fusionar las celdas del título de la obra
+      sheet.mergeCells(`A${rNum.number}:D${rNum.number}`);
+
+      // 3. Filas de Operarios
       Object.values(obra.operarios).forEach(op => {
-        html += `<tr>`;
-        html += `<td>${op.codigo}</td>`;
-        html += `<td><b>${op.nombre}</b></td>`;
-        html += `<td>${op.categoria}</td>`;
-        html += `<td>${op.obraNombre}</td>`;
-
+        const filaOp = [op.codigo, op.nombre, op.categoria, op.obraNombre];
         let sumaOp = 0;
+        const tiposDiasArray = [];
+
         diasArray.forEach(d => {
           const fStr = d.toISOString().split('T')[0];
-          const esFinDeSemana = d.getDay() === 0 || d.getDay() === 6;
           const celdaData = op.dias[fStr];
-
-          let claseCSS = '';
           let contenido = '';
-
-          if (esFinDeSemana) {
-            claseCSS = 'rojo';
-          }
+          let tipoCelda = 'trabajo';
 
           if (celdaData) {
-            if (celdaData.tipo === 'vacaciones') { 
-              claseCSS = 'vacaciones'; 
-              contenido = 'V'; 
-            }
-            else if (celdaData.tipo === 'baja') { 
-              claseCSS = 'baja'; 
-              contenido = 'B'; 
-            }
-            else if (celdaData.tipo === 'paternidad') { 
-              claseCSS = 'permiso'; 
-              contenido = 'P'; 
-            }
-            else if (celdaData.tipo === 'permiso') { 
-              claseCSS = 'permiso'; 
-              contenido = celdaData.val; 
-              sumaOp += parseFloat(celdaData.val || 0); 
-            }
-            else { 
-              claseCSS = 'trabajo'; 
-              contenido = celdaData.val; 
-              sumaOp += parseFloat(celdaData.val || 0); 
-            }
+            if (celdaData.tipo === 'vacaciones') { contenido = 'V'; tipoCelda = 'vacaciones'; }
+            else if (celdaData.tipo === 'baja') { contenido = 'B'; tipoCelda = 'baja'; }
+            else if (celdaData.tipo === 'paternidad') { contenido = 'P'; tipoCelda = 'permiso'; }
+            else if (celdaData.tipo === 'permiso') { contenido = celdaData.val; tipoCelda = 'permiso'; sumaOp += parseFloat(celdaData.val || 0); }
+            else { contenido = celdaData.val; sumaOp += parseFloat(celdaData.val || 0); }
           }
-          html += `<td class="${claseCSS}">${contenido}</td>`;
+          filaOp.push(contenido);
+          tiposDiasArray.push(tipoCelda);
         });
 
+        filaOp.push(Math.round(sumaOp * 10) / 10);
         totalHorasObra += sumaOp;
-        html += `<td style="text-align: right; font-weight: bold;">${sumaOp.toFixed(1).replace('.', ',')}</td>`;
-        html += `</tr>`;
+
+        const rOp = sheet.addRow(filaOp);
+        rOp.border = estiloBordeFino;
+        rOp.alignment = { vertical: 'middle' };
+
+        // Aplicar estilos específicos por celda de día
+        diasArray.forEach((d, idx) => {
+          const colIndex = 5 + idx; // Las columnas de días empiezan en la 5 (E)
+          const cell = rOp.getCell(colIndex);
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+          const esFinDeSemana = d.getDay() === 0 || d.getDay() === 6;
+          const tipo = tiposDiasArray[idx];
+
+          if (tipo === 'vacaciones') {
+            cell.fill = estilosFondo.vacaciones;
+            cell.font = { bold: true, color: { argb: 'FF990033' } };
+          } else if (tipo === 'baja') {
+            cell.fill = estilosFondo.baja;
+            cell.font = { bold: true, color: { argb: 'FF003300' } };
+          } else if (tipo === 'permiso') {
+            cell.fill = estilosFondo.permiso;
+            cell.font = { bold: true, color: { argb: 'FF000066' } };
+          } else if (esFinDeSemana) {
+            cell.fill = estilosFondo.rojo;
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+          }
+        });
       });
 
-      // Fila Total Obra
-      html += `<tr class="cabecera-obra"><td colspan="${4 + diasArray.length}" style="text-align: left;">Total ${obra.nombre}</td><td style="text-align: right;">${totalHorasObra.toFixed(1).replace('.', ',')}</td></tr>`;
-      html += `</table><br/>`;
+      // 4. Fila Total Obra
+      const filaTotal = [`Total ${obra.nombre}`];
+      for(let i=0; i < diasArray.length + 3; i++) filaTotal.push('');
+      filaTotal.push(Math.round(totalHorasObra * 10) / 10);
+
+      const rTot = sheet.addRow(filaTotal);
+      rTot.font = { bold: true, color: { argb: 'FF004B87' } };
+      rTot.eachCell((cell) => {
+        cell.fill = estilosFondo.obraCab;
+        cell.border = estiloBordeFino;
+        cell.alignment = { vertical: 'middle' };
+      });
+      sheet.mergeCells(`A${rTot.number}:D${rTot.number}`);
+
+      // Añadir espacio en blanco entre obras
+      sheet.addRow([]);
     });
 
-    html += `</body></html>`;
+    // Configurar cabeceras de respuesta HTTP para Excel real (.xlsx)
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=informe_quincenal_matricial.xlsx');
 
-    res.setHeader('Content-Type', 'application/vnd.ms-excel; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename=informe_quincenal_matricial.xls');
-    res.status(200).send(html);
+    await workbook.xlsx.write(res);
+    res.end();
 
   } catch (error) {
-    console.error('Error al exportar matriz quincenal:', error);
+    console.error('Error al exportar matriz quincenal con ExcelJS:', error);
     res.status(500).json({ success: false, error: 'Error interno en el servidor' });
   }
 });
