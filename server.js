@@ -945,6 +945,31 @@ app.get('/api/admin/exportar-dedicacion-jefe/:id_jefe', async (req, res) => {
   }
 });
 
+// Endpoint para obtener el resumen de horas imputadas por los Jefes de Obra en un rango de fechas
+app.get('/api/admin/resumen-jefes-dedicacion', async (req, res) => {
+    const { inicio, fin } = req.query;
+    if (!inicio || !fin) {
+        return res.status(400).json({ success: false, error: 'Faltan las fechas de inicio y fin' });
+    }
+
+    try {
+        // Consulta SQL para sumar las horas de los partes cuyas obras estén asignadas a cada jefe, 
+        // o bien sumando las horas de sus partes directos según tu estructura de base de datos.
+        // Aquí sumamos los partes registrados en las obras asociadas a los jefes o imputados por ellos.
+        const [rows] = await pool.query(`
+            p.id_usuario, SUM(p.horas) as total_horas
+            FROM partes p
+            WHERE p.fecha BETWEEN ? AND ?
+            GROUP BY p.id_usuario
+        `, [inicio, fin]);
+
+        res.json({ success: true, resumen: rows });
+    } catch (error) {
+        console.error("Error al obtener resumen de jefes:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 
 // ==========================================
 // ENCENDIDO DEL SERVIDOR
