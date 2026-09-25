@@ -20,12 +20,14 @@
             }
             body * { visibility: hidden; }
             
+            /* Solo se muestra el panel de resultados o la plantilla individual según corresponda */
             #panelResultados:not(.hidden), #panelResultados:not(.hidden) *, 
+            #plantillaListadoImpresion:not(.hidden), #plantillaListadoImpresion:not(.hidden) *,
             #plantillaParteIndividual:not(.hidden), #plantillaParteIndividual:not(.hidden) * { 
                 visibility: visible; 
             }
             
-            #panelResultados:not(.hidden), #plantillaParteIndividual:not(.hidden) { 
+            #panelResultados:not(.hidden), #plantillaListadoImpresion:not(.hidden), #plantillaParteIndividual:not(.hidden) { 
                 position: absolute !important; 
                 left: 0 !important; 
                 top: 0 !important; 
@@ -40,13 +42,10 @@
             }
             .no-print { display: none !important; }
 
-            /* Estilo específico para los elementos repetibles en listado impreso */
             .print-item {
                 break-inside: avoid;
                 page-break-inside: avoid;
-                border-bottom: 1px solid #d1d5db !important;
-                padding-bottom: 12px !important;
-                margin-bottom: 12px !important;
+                margin-bottom: 12px;
             }
 
             .print-footer {
@@ -133,30 +132,8 @@
                     </div>
                     
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hidden" id="panelResultados">
-                        <div class="hidden print:block border-b-2 border-gray-800 pb-4 mb-6">
-                            <div class="flex justify-between items-center">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-12 h-12 bg-[#ffcc00] rounded-xl flex items-center justify-center font-black text-[#004b87] text-xl border-2 border-[#004b87]">CSV</div>
-                                    <div>
-                                        <h1 class="text-base font-extrabold text-gray-900">Informe General de Partes de Trabajo</h1>
-                                        <p class="text-xs text-gray-600 font-medium">CSV Construcción S.L.</p>
-                                    </div>
-                                </div>
-                                <div class="text-right text-xs text-gray-700">
-                                    <div><strong class="font-bold">Jefe de Obra:</strong> <span id="printJefeNombre"></span></div>
-                                    <div><strong class="font-bold">Emisión:</strong> <span id="printFechaEmision"></span></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flex justify-between items-center mb-4 border-b pb-2 no-print"><h3 class="text-md font-bold text-[#004b87]">Desglose de Partes</h3><div class="text-sm font-bold bg-yellow-100 text-yellow-800 px-3 py-1 rounded">Total: <span id="statHoras">0</span>h</div></div>
+                        <div class="flex justify-between items-center mb-4 border-b pb-2"><h3 class="text-md font-bold text-[#004b87]">Desglose de Partes</h3><div class="text-sm font-bold bg-yellow-100 text-yellow-800 px-3 py-1 rounded">Total: <span id="statHoras">0</span>h</div></div>
                         <div id="listaPartes" class="space-y-3"></div>
-
-                        <div class="print-footer hidden print:flex">
-                            <div>CSV Construcción S.L. - Documento Oficial</div>
-                            <div class="flex items-center gap-2 font-black text-[#004b87]">CSV</div>
-                            <div>Pág. <span class="page-number"></span></div>
-                        </div>
                     </div>
                 </section>
 
@@ -214,6 +191,34 @@
                     </div>
                 </section>
             </main>
+        </div>
+    </div>
+
+    <!-- PLANTILLA OCULTA PARA IMPRESIÓN DEL LISTADO COMPLETO -->
+    <div id="plantillaListadoImpresion" class="hidden">
+        <div class="bg-white p-8 max-w-2xl mx-auto space-y-6 font-sans">
+            <div class="flex justify-between items-start border-b-2 border-gray-800 pb-4 mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-[#ffcc00] rounded-xl flex items-center justify-center font-black text-[#004b87] text-xl border-2 border-[#004b87]">CSV</div>
+                    <div>
+                        <h1 class="text-lg font-extrabold text-gray-900">Informe General de Partes de Trabajo</h1>
+                        <p class="text-xs text-gray-600 font-medium">CSV Construcción S.L.</p>
+                    </div>
+                </div>
+                <div class="text-right text-xs text-gray-700">
+                    <div><strong class="font-bold">Jefe de Obra:</strong> <span id="printListadoJefe"></span></div>
+                    <div><strong class="font-bold">Emisión:</strong> <span id="printListadoEmision"></span></div>
+                    <div><strong class="font-bold">Total Horas:</strong> <span id="printListadoTotalHoras"></span>h</div>
+                </div>
+            </div>
+
+            <div id="contenedorPartesImpresion" class="space-y-4"></div>
+
+            <div class="print-footer hidden print:flex">
+                <div>CSV Construcción S.L. - Documento Oficial</div>
+                <div class="flex items-center gap-2 font-black text-[#004b87]">CSV</div>
+                <div>Pág. <span class="page-number"></span></div>
+            </div>
         </div>
     </div>
 
@@ -283,8 +288,8 @@
             const idJefe = localStorage.getItem('usuario_id');
             const nombreJefe = localStorage.getItem('usuario_nombre') || 'Jefe de Obra';
             document.getElementById('nombreUsuarioHeader').textContent = nombreJefe;
-            document.getElementById('printJefeNombre').textContent = nombreJefe;
-            document.getElementById('printFechaEmision').textContent = new Date().toLocaleDateString('es-ES');
+            document.getElementById('printListadoJefe').textContent = nombreJefe;
+            document.getElementById('printListadoEmision').textContent = new Date().toLocaleDateString('es-ES');
 
             const hoy = new Date();
             document.getElementById('filtroInicio').value = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
@@ -364,7 +369,7 @@
                         const fechaParte = p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : 'N/A';
                         
                         contenedor.innerHTML += `
-                            <div class="border rounded-lg p-4 bg-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 print-item">
+                            <div class="border rounded-lg p-4 bg-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                                 <div>
                                     <div class="flex justify-between font-bold text-sm">
                                         <span>${p.operario_nombre}</span>
@@ -388,13 +393,68 @@
         }
 
         function imprimirListadoCompleto() {
-            const panel = document.getElementById('panelResultados');
-            if (panel.classList.contains('hidden') || !panel.innerHTML.trim()) {
+            if (partesConsultaGlobal.length === 0) {
                 alert('⚠️ Primero debes realizar una consulta válida con resultados.');
                 return;
             }
+
+            // Rellenar datos de cabecera de la plantilla de listado
+            const nombreJefe = localStorage.getItem('usuario_nombre') || 'Jefe de Obra';
+            document.getElementById('printListadoJefe').textContent = nombreJefe;
+            document.getElementById('printListadoEmision').textContent = new Date().toLocaleDateString('es-ES');
+            document.getElementById('printListadoTotalHoras').textContent = document.getElementById('statHoras').textContent;
+
+            // Construir los bloques agrupados por día de manera limpia
+            const contenedorImpresion = document.getElementById('contenedorPartesImpresion');
+            contenedorImpresion.innerHTML = '';
+
+            // Agrupar partes por fecha
+            const gruposPorFecha = {};
+            partesConsultaGlobal.forEach(p => {
+                const fechaStr = p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : 'Fecha no especificada';
+                if (!gruposPorFecha[fechaStr]) gruposPorFecha[fechaStr] = [];
+                gruposPorFecha[fechaStr].push(p);
+            });
+
+            // Generar estructura de impresión limpia por bloques de días
+            for (const [fecha, partesDia] of Object.entries(gruposPorFecha)) {
+                let htmlPartesDia = '';
+                partesDia.forEach(p => {
+                    const horasLimpias = parseFloat(p.horas || 0).toLocaleString('es-ES', { maximumFractionDigits: 1 });
+                    htmlPartesDia += `
+                        <div class="bg-gray-50 p-3.5 rounded-lg border border-gray-200 mb-2.5 print-item">
+                            <div class="flex justify-between items-center text-sm font-bold text-gray-900 border-b pb-1.5 mb-1.5">
+                                <span>👤 ${p.operario_nombre}</span>
+                                <span class="text-[#004b87]">${horasLimpias}h</span>
+                            </div>
+                            <div class="text-xs text-gray-600 mb-1"><strong>Obra:</strong> ${p.obra_nombre}</div>
+                            <div class="text-xs text-gray-700 bg-white p-2 rounded border"><strong>Tareas:</strong> ${p.tareas}</div>
+                        </div>`;
+                });
+
+                contenedorImpresion.innerHTML += `
+                    <div class="mb-6 print-item">
+                        <div class="bg-[#004b87] text-white text-xs font-extrabold px-3 py-1.5 rounded-t-lg uppercase tracking-wider flex justify-between items-center">
+                            <span>📅 Fecha: ${fecha}</span>
+                            <span>${partesDia.length} parte(s)</span>
+                        </div>
+                        <div class="border-x border-b border-gray-300 p-3 rounded-b-lg bg-white">
+                            ${htmlPartesDia}
+                        </div>
+                    </div>`;
+            }
+
+            // Ocultar otros paneles y mostrar la plantilla de listado para imprimir
+            document.getElementById('panelResultados').classList.add('hidden');
             document.getElementById('plantillaParteIndividual').classList.add('hidden');
+            
+            const plantillaListado = document.getElementById('plantillaListadoImpresion');
+            plantillaListado.classList.remove('hidden');
+
             window.print();
+
+            plantillaListado.classList.add('hidden');
+            document.getElementById('panelResultados').classList.remove('hidden');
         }
 
         function descargarParteIndex(index) {
@@ -406,6 +466,7 @@
             const horasLimpias = parseFloat(p.horas || 0).toLocaleString('es-ES', { maximumFractionDigits: 1 });
 
             document.getElementById('panelResultados').classList.add('hidden');
+            document.getElementById('plantillaListadoImpresion').classList.add('hidden');
 
             document.getElementById('indJefeNombre').textContent = nombreJefe;
             document.getElementById('indFechaEmision').textContent = new Date().toLocaleDateString('es-ES');
