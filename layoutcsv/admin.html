@@ -365,7 +365,7 @@
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-4">
                             <div>
                                 <h2 class="text-lg font-bold text-[#004b87] mb-1">Dedicación y Progreso de Jefes de Obra</h2>
-                                <p class="text-xs text-gray-600">Listado de todos los jefes de obra activos con las horas acumuladas del mes en curso y selector de fechas independiente.</p>
+                                <p class="text-xs text-gray-600">Listado de todos los jefes de obra activos con las horas acumuladas según el selector de fechas independiente.</p>
                             </div>
                         </div>
 
@@ -1074,9 +1074,12 @@
             await cargarPanelJefesDedicacion();
         }
 
-        async function cargarPanelJefesDedicacion() {
+        async function cargarPanelJefesDedicacion(idJefeEspecifico = null) {
             const contenedor = document.getElementById('contenedorTarjetasJefes');
-            contenedor.innerHTML = '<div class="text-xs text-gray-500 p-4">Actualizando datos de los jefes de obra...</div>';
+            
+            if (!idJefeEspecifico) {
+                contenedor.innerHTML = '<div class="text-xs text-gray-500 p-4">Actualizando datos de los jefes de obra...</div>';
+            }
 
             const hoy = new Date();
             const anio = hoy.getFullYear();
@@ -1095,7 +1098,7 @@
 
                 const jefes = dataUsers.usuarios.filter(u => {
                     const rol = (u.rol || '').toUpperCase().trim();
-                    return rol === 'JEFE_DE_OBRA' && u.activo;
+                    return (rol === 'JEFE_DE_OBRA' || rol === 'JEFEDEOBRA' || rol === 'JEFE DE OBRA') && u.activo;
                 });
 
                 if (jefes.length === 0) {
@@ -1103,13 +1106,23 @@
                     return;
                 }
 
-                const horasObjetivoMes = 160; 
-                contenedor.innerHTML = '';
+                if (!idJefeEspecifico) {
+                    contenedor.innerHTML = '';
+                }
 
                 for (const jefe of jefes) {
+                    // Si se está recalculando solo un jefe específico, evitamos redibujar toda la tarjeta para no perder el foco
+                    if (idJefeEspecifico && jefe.id_usuario != idJefeEspecifico) continue;
+
+                    let inicioInput = document.getElementById(`inicio_${jefe.id_usuario}`);
+                    let finInput = document.getElementById(`fin_${jefe.id_usuario}`);
+                    
+                    const rangoInicio = inicioInput ? inicioInput.value : defaultInicio;
+                    const rangoFin = finInput ? finInput.value : defaultFin;
+
                     let horasSupervisadas = 0;
                     try {
-                        const resPartes = await fetch(`/api/admin/partes-filtrados?id_usuario=${jefe.id_usuario}&fecha_inicio=${defaultInicio}&fecha_fin=${defaultFin}`);
+                        const resPartes = await fetch(`/api/admin/partes-filtrados?id_usuario=${jefe.id_usuario}&fecha_inicio=${rangoInicio}&fecha_fin=${rangoFin}`);
                         const dataPartes = await resPartes.json();
                         if (dataPartes.success && dataPartes.partes) {
                             dataPartes.partes.forEach(p => {
@@ -1120,15 +1133,16 @@
                         console.warn(`No se pudieron cargar los partes para el jefe ${jefe.id_usuario}:`, errP);
                     }
 
+                    const horasObjetivoMes = 160; 
                     const porcentajeProgreso = Math.min(Math.round((horasSupervisadas / horasObjetivoMes) * 100), 100);
                     
                     let colorBarra = 'bg-blue-600';
                     if (porcentajeProgreso >= 80) colorBarra = 'bg-green-600';
                     else if (porcentajeProgreso < 30) colorBarra = 'bg-amber-500';
 
-                    const tarjeta = document.createElement('div');
-                    tarjeta.className = 'bg-white p-5 rounded-2xl shadow-sm border border-gray-200 space-y-4 flex flex-col justify-between';
-                    tarjeta.innerHTML = `
+                    let tarjeta = document.getElementById(`tarjeta_jefe_${jefe.id_usuario}`);
+                    
+                    const htmlContenido = `
                         <div>
                             <div class="flex justify-between items-start mb-2">
                                 <div>
@@ -1136,14 +1150,14 @@
                                     <span class="text-[10px] uppercase font-bold bg-yellow-100 text-[#004b87] px-2 py-0.5 rounded">JEFE DE OBRA</span>
                                 </div>
                                 <div class="text-right">
-                                    <span class="text-xl font-black text-gray-900">${horasSupervisadas}h</span>
-                                    <div class="text-[10px] text-gray-400">Mes en curso</div>
+                                    <span class="text-xl font-black text-gray-900">${horasSupervisadas.toLocaleString('es-ES', { maximumFractionDigits: 1 })}h</span>
+                                    <div class="text-[10px] text-gray-400">Total en rango</div>
                                 </div>
                             </div>
 
                             <div class="space-y-1 pt-2">
                                 <div class="flex justify-between text-xs font-semibold text-gray-600">
-                                    <span>Horas realizadas este mes (${horasSupervisadas}h / ${horasObjetivoMes}h)</span>
+                                    <span>Horas realizadas (${horasSupervisadas.toLocaleString('es-ES', { maximumFractionDigits: 1 })}h / ${horasObjetivoMes}h)</span>
                                     <span class="text-[#004b87] font-bold">${porcentajeProgreso}%</span>
                                 </div>
                                 <div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
@@ -1156,11 +1170,11 @@
                             <div class="grid grid-cols-2 gap-2 bg-yellow-50 p-2 rounded-lg border border-yellow-200">
                                 <div>
                                     <label class="block text-[8px] font-bold uppercase text-[#004b87]">Desde</label>
-                                    <input type="date" id="inicio_${jefe.id_usuario}" value="${defaultInicio}" class="w-full border border-gray-300 p-1 rounded bg-white text-[11px] outline-none" />
+                                    <input type="date" id="inicio_${jefe.id_usuario}" value="${rangoInicio}" onchange="cargarPanelJefesDedicacion(${jefe.id_usuario})" class="w-full border border-gray-300 p-1 rounded bg-white text-[11px] outline-none" />
                                 </div>
                                 <div>
                                     <label class="block text-[8px] font-bold uppercase text-[#004b87]">Hasta</label>
-                                    <input type="date" id="fin_${jefe.id_usuario}" value="${defaultFin}" class="w-full border border-gray-300 p-1 rounded bg-white text-[11px] outline-none" />
+                                    <input type="date" id="fin_${jefe.id_usuario}" value="${rangoFin}" onchange="cargarPanelJefesDedicacion(${jefe.id_usuario})" class="w-full border border-gray-300 p-1 rounded bg-white text-[11px] outline-none" />
                                 </div>
                             </div>
                             <button onclick="descargarDedicacionJefeIndividual(${jefe.id_usuario})" class="w-full bg-[#004b87] hover:bg-blue-900 text-white font-bold text-xs py-2.5 rounded-xl shadow transition flex items-center justify-center gap-1.5">
@@ -1168,7 +1182,16 @@
                             </button>
                         </div>
                     `;
-                    contenedor.appendChild(tarjeta);
+
+                    if (tarjeta) {
+                        tarjeta.innerHTML = htmlContenido;
+                    } else {
+                        tarjeta = document.createElement('div');
+                        tarjeta.id = `tarjeta_jefe_${jefe.id_usuario}`;
+                        tarjeta.className = 'bg-white p-5 rounded-2xl shadow-sm border border-gray-200 space-y-4 flex flex-col justify-between';
+                        tarjeta.innerHTML = htmlContenido;
+                        contenedor.appendChild(tarjeta);
+                    }
                 }
 
             } catch(e) { 
