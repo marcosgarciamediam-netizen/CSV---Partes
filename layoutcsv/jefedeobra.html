@@ -50,12 +50,17 @@
 
             <main class="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50 space-y-6">
                 
-                <!-- VISTA 1: CONSULTA DE OBRAS (SOLO SUS OBRAS ASIGNADAS) -->
+                <!-- VISTA 1: CONSULTA DE OBRAS -->
                 <section id="seccion-consulta" class="vista-panel space-y-6">
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                         <h2 class="text-lg font-bold text-[#004b87] mb-2">Control de Cuadrillas</h2>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-4 bg-gray-50 rounded-lg border">
-                            <div><label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Obra Asignada</label><select id="filtroObra" class="w-full border p-2.5 rounded-lg bg-white text-sm"><option value="">-- Selecciona Obra --</option></select></div>
+                            <div class="relative">
+                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Obra Asignada</label>
+                                <input type="text" id="buscadorObraConsulta" placeholder="Escribe para buscar obra..." oninput="filtrarObrasPrediccion('Consulta', this.value)" class="w-full border p-2.5 rounded-lg bg-white text-sm outline-none font-semibold" autocomplete="off" />
+                                <div id="listaObrasConsultaResultados" class="absolute z-20 left-0 right-0 mt-1 border rounded-xl max-h-48 overflow-y-auto bg-white divide-y divide-gray-100 shadow-xl hidden"></div>
+                                <input type="hidden" id="filtroObra" />
+                            </div>
                             <div><label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Desde</label><input type="date" id="filtroInicio" class="w-full border p-2.5 rounded-lg bg-white text-sm" /></div>
                             <div><label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Hasta</label><input type="date" id="filtroFin" class="w-full border p-2.5 rounded-lg bg-white text-sm" /></div>
                         </div>
@@ -73,7 +78,12 @@
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                             <h2 class="text-lg font-bold text-[#004b87] mb-2">Imputar Dedicación</h2>
                             <form id="formParte" onsubmit="enviarMiParte(event)" class="space-y-4">
-                                <div><label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Obra Asignada</label><select id="miObraSelect" required class="w-full border p-3 rounded-xl text-sm bg-gray-50"><option value="">Cargando...</option></select></div>
+                                <div class="relative">
+                                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Obra Asignada</label>
+                                    <input type="text" id="buscadorObraImputacion" placeholder="Escribe para buscar obra..." oninput="filtrarObrasPrediccion('Imputacion', this.value)" required class="w-full border p-3 rounded-xl text-sm bg-gray-50 font-semibold outline-none" autocomplete="off" />
+                                    <div id="listaObrasImputacionResultados" class="absolute z-20 left-0 right-0 mt-1 border rounded-xl max-h-48 overflow-y-auto bg-white divide-y divide-gray-100 shadow-xl hidden"></div>
+                                    <input type="hidden" id="miObraSelect" required />
+                                </div>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div><label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Fecha Inicio</label><input type="date" id="miFechaInicio" required class="w-full border p-3 rounded-xl text-sm bg-gray-50" /></div>
                                     <div id="contenedorFechaFin"><label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Fecha Fin (Opcional)</label><input type="date" id="miFechaFin" class="w-full border p-3 rounded-xl text-sm bg-gray-50" /></div>
@@ -122,6 +132,7 @@
     <script>
         const nombresSecciones = { 'consulta': 'Consulta de Obras', 'partes': 'Mis Partes (Dedicación)' };
         let editandoIdParte = null;
+        let listaObrasJefeGlobal = [];
 
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('-translate-x-full'); document.getElementById('sidebar-backdrop').classList.toggle('hidden'); }
 
@@ -154,12 +165,38 @@
                 const res = await fetch(`/api/jefe/${idJefe}/obras`);
                 const data = await res.json();
                 if (data.success) {
-                    let opciones = '<option value="">-- Selecciona Obra --</option>';
-                    data.obras.forEach(o => opciones += `<option value="${o.id_obra}">${o.nombre}</option>`);
-                    document.getElementById('filtroObra').innerHTML = opciones;
-                    document.getElementById('miObraSelect').innerHTML = opciones;
+                    listaObrasJefeGlobal = data.obras;
                 }
             } catch (e) { console.error(e); }
+        });
+
+        function filtrarObrasPrediccion(tipo, query) {
+            const contenedor = document.getElementById(`listaObras${tipo}Resultados`);
+            contenedor.innerHTML = '';
+            const filtradas = listaObrasJefeGlobal.filter(o => o.nombre.toLowerCase().includes(query.toLowerCase())).slice(0, 30);
+            
+            if (filtradas.length === 0) {
+                contenedor.classList.add('hidden');
+                return;
+            }
+
+            contenedor.classList.remove('hidden');
+            filtradas.forEach(o => {
+                contenedor.innerHTML += `<div onclick="seleccionarObraPrediccion('${tipo}', ${o.id_obra}, '${o.nombre.replace(/'/g, "\\'")}')" class="p-2.5 text-xs text-gray-700 hover:bg-yellow-50 hover:text-[#004b87] cursor-pointer font-medium transition">🏢 ${o.nombre}</div>`;
+            });
+        }
+
+        function seleccionarObraPrediccion(tipo, idObra, nombreObra) {
+            document.getElementById(`buscadorObra${tipo}`).value = nombreObra;
+            document.getElementById(tipo === 'Consulta' ? 'filtroObra' : 'miObraSelect').value = idObra;
+            document.getElementById(`listaObras${tipo}Resultados`).classList.add('hidden');
+        }
+
+        // Ocultar resultados al hacer click fuera
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.relative')) {
+                document.querySelectorAll('[id$="Resultados"]').forEach(el => el.classList.add('hidden'));
+            }
         });
 
         async function consultarTrabajos() {
@@ -169,7 +206,7 @@
             const contenedor = document.getElementById('listaPartes');
             
             if (!idObra) {
-                alert('⚠️ Por favor, selecciona una obra obligatoriamente para consultar los partes.');
+                alert('⚠️ Por favor, selecciona una obra válida haciendo clic en la predicción.');
                 return;
             }
 
@@ -199,8 +236,9 @@
             } catch (e) { console.error(e); }
         }
 
-        function iniciarEdicion(id_parte, id_obra, fecha, horas, tareas) {
+        function iniciarEdicion(id_parte, id_obra, nombreObra, fecha, horas, tareas) {
             editandoIdParte = id_parte;
+            document.getElementById('buscadorObraImputacion').value = nombreObra;
             document.getElementById('miObraSelect').value = id_obra;
             document.getElementById('miFechaInicio').value = fecha;
             document.getElementById('miHorasInput').value = horas;
@@ -216,6 +254,8 @@
             editandoIdParte = null;
             document.getElementById('formParte').reset();
             document.getElementById('miFechaInicio').value = new Date().toISOString().split('T')[0];
+            document.getElementById('buscadorObraImputacion').value = '';
+            document.getElementById('miObraSelect').value = '';
             document.getElementById('contenedorFechaFin').classList.remove('hidden');
             const btn = document.getElementById('btnSubmitParte');
             btn.textContent = '🚀 Guardar';
@@ -227,13 +267,24 @@
             e.preventDefault();
             const btn = document.getElementById('btnSubmitParte'); 
             const feedback = document.getElementById('mensajeFeedback');
-            const idObra = document.getElementById('miObraSelect').value;
+            let idObra = document.getElementById('miObraSelect').value;
+            const textoObra = document.getElementById('buscadorObraImputacion').value.trim();
             const fechaInicio = document.getElementById('miFechaInicio').value;
             const fechaFin = document.getElementById('miFechaFin').value;
             const totalHoras = parseFloat(document.getElementById('miHorasInput').value);
             const tareas = document.getElementById('miTareasInput').value;
             const idUsuario = localStorage.getItem('usuario_id');
             
+            if (!idObra) {
+                const encontrada = listaObrasJefeGlobal.find(o => o.nombre.toLowerCase().trim() === textoObra.toLowerCase());
+                if (encontrada) idObra = encontrada.id_obra;
+            }
+
+            if (!idObra) {
+                alert('⚠️ Por favor, selecciona una obra válida de la lista desplegable.');
+                return;
+            }
+
             btn.disabled = true; feedback.classList.add('hidden');
             
             try {
@@ -249,9 +300,6 @@
                         cargarMiResumenMensual(); 
                     }
                 } else {
-                    // Si se indicó fecha fin y es distinta, podemos guardar la fecha de inicio o reflejar el rango en las tareas si se desea, 
-                    // pero se envía un único registro con la fecha de inicio seleccionada y el total de horas.
-                    const fechaRegistro = fechaInicio;
                     const detalleTareas = fechaFin && fechaFin !== fechaInicio 
                         ? `[Del ${fechaInicio} al ${fechaFin}] ${tareas}` 
                         : tareas;
@@ -262,7 +310,7 @@
                         body: JSON.stringify({ 
                             id_usuario: idUsuario, 
                             id_obra: idObra, 
-                            fecha: fechaRegistro, 
+                            fecha: fechaInicio, 
                             horas: totalHoras, 
                             tareas: detalleTareas 
                         }) 
@@ -274,6 +322,8 @@
                         feedback.className = 'p-3 text-xs font-semibold rounded text-center bg-green-50 text-green-700 block mt-4';
                         document.getElementById('miTareasInput').value = '';
                         document.getElementById('miFechaFin').value = '';
+                        document.getElementById('buscadorObraImputacion').value = '';
+                        document.getElementById('miObraSelect').value = '';
                         cargarMiResumenMensual();
                     } else {
                         feedback.textContent = '❌ Error al guardar el parte.'; 
@@ -323,7 +373,7 @@
                                     <div class="text-[11px] text-gray-400">${p.fecha_registro} | ${p.tareas}</div>
                                 </div>
                                 <div class="flex items-center gap-1 shrink-0">
-                                    <button type="button" onclick="iniciarEdicion(${p.id_parte}, '${p.id_obra}', '${p.fecha.split('T')[0]}', ${p.horas}, '${p.tareas.replace(/'/g, "\\'")}')" class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded text-xs font-bold transition hover:bg-blue-200" title="Editar parte">✏️</button>
+                                    <button type="button" onclick="iniciarEdicion(${p.id_parte}, '${p.id_obra}', '${p.obra_nombre.replace(/'/g, "\\'")}', '${p.fecha.split('T')[0]}', ${p.horas}, '${p.tareas.replace(/'/g, "\\'")}')" class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded text-xs font-bold transition hover:bg-blue-200" title="Editar parte">✏️</button>
                                     <button type="button" onclick="eliminarParte(${p.id_parte})" class="bg-red-100 text-red-700 px-2.5 py-1 rounded text-xs font-bold transition hover:bg-red-200" title="Eliminar parte">🗑️</button>
                                 </div>
                             </div>`;
