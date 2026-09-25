@@ -617,3 +617,90 @@ async function guardarEdicionParteModal() {
                 alert('❌ No se pudo conectar con el servidor.');
             }
         }
+
+
+        
+// ==========================================
+// RUTA: Exportar informe quincenal a Excel
+// ==========================================
+app.get('/api/admin/exportar', async (req, res) => {
+  const { inicio, fin } = req.query;
+
+  if (!inicio || !fin) {
+    return res.status(400).send('Faltan fechas de inicio y fin.');
+  }
+
+  try {
+    const query = `
+      SELECT pt.fecha, pt.horas, pt.tareas, COALESCE(pt.tipo, 'trabajo') AS tipo, 
+             u.nombre AS operario_nombre, u.codigo_operario, u.categoria,
+             o.nombre AS obra_nombre
+      FROM partes_trabajo pt
+      JOIN usuarios u ON pt.id_usuario = u.id_usuario
+      JOIN obras o ON pt.id_obra = o.id_obra
+      WHERE pt.fecha BETWEEN $1 AND $2
+      ORDER BY u.nombre ASC, pt.fecha ASC;
+    `;
+    const resultado = await pool.query(query, [inicio, fin]);
+    const partes = resultado.rows;
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Informe Quincenal');
+
+    // Definir las columnas del Excel
+    worksheet.columns = [
+      { header: 'CÓDIGO', key: 'codigo', width: 12 },
+      { header: 'OPERARIO', key: 'operario', width: 35 },
+      { header: 'FECHA', key: 'fecha', width: 15 },
+      { header: 'HORAS', key: 'horas', width: 10 },
+      { header: 'OBRA', key: 'obra', width: 45 },
+      { header: 'TAREAS / ESTADO', key: 'tareas', width: 50 }
+    ];
+
+    // Estilo de la cabecera (Fondo azul, texto blanco)
+    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF004B87' } };
+    worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+    // Añadir filas y pintar colores
+    partes.forEach(p => {
+      const row = worksheet.addRow({
+        codigo: p.codigo_operario || '',
+        operario: p.operario_nombre,
+        fecha: new Date(p.fecha).toLocaleDateString('es-ES'),
+        horas: p.tipo === 'paternidad' ? 'P' : parseFloat(p.horas),
+        obra: p.obra_nombre,
+        tareas: p.tareas
+      });
+
+      // Lógica de colores (Rosa: vacaciones, Verde: baja, Azul: permiso, Morado: paternidad)
+      let colorFondo = null;
+      if (p.tipo === 'vacaciones') colorFondo = 'FFFFC0CB';
+      else if (p.tipo === 'baja') colorFondo = 'FF98FB98';
+      else if (p.tipo === 'permiso') colorFondo = 'FFADD8E6';
+      else if (p.tipo === 'paternidad') colorFondo = 'FFDDA0DD';
+
+      if (colorFondo) {
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: colorFondo }
+          };
+          cell.font = { bold: true };
+        });
+      }
+    });
+
+    // Enviar el archivo generado al navegador
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="Informe_Quincenal_${inicio}_al_${fin}.xlsx"`);
+    
+    await workbook.xlsx.write(res);
+    res.end();
+
+  } catch (error) {
+    console.error('Error al generar Excel:', error);
+    res.status(500).send('Error interno del servidor al generar el informe en Excel.');
+  }
+});
