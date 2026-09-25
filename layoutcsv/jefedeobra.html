@@ -13,8 +13,8 @@
                 background: white !important;
             }
             body * { visibility: hidden; }
-            #panelResultados, #panelResultados * { visibility: visible; }
-            #panelResultados { 
+            #zonaImpresionIndividual, #zonaImpresionIndividual * { visibility: visible; }
+            #zonaImpresionIndividual { 
                 position: absolute !important; 
                 left: 0 !important; 
                 top: 0 !important; 
@@ -25,6 +25,7 @@
                 margin: 0 !important;
                 box-shadow: none !important;
                 background: white !important;
+                display: block !important;
             }
             .no-print { display: none !important; }
         }
@@ -90,7 +91,7 @@
                         </div>
                         <div class="flex flex-wrap gap-3">
                             <button onclick="consultarTrabajos()" class="bg-[#ffcc00] text-[#004b87] font-bold text-sm px-6 py-3 rounded-lg shadow hover:bg-yellow-400 transition">📊 Consultar</button>
-                            <button onclick="window.print()" class="bg-[#004b87] text-white font-bold text-sm px-6 py-3 rounded-lg shadow hover:bg-blue-900 transition flex items-center gap-2"><span>📥</span> Descargar Todos en PDF</button>
+                            <button onclick="imprimirListadoCompleto()" class="bg-[#004b87] text-white font-bold text-sm px-6 py-3 rounded-lg shadow hover:bg-blue-900 transition flex items-center gap-2"><span>📥</span> Descargar Todos en PDF</button>
                         </div>
                     </div>
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hidden" id="panelResultados">
@@ -156,22 +157,8 @@
         </div>
     </div>
 
-    <!-- MODAL DE IMPRESIÓN INDIVIDUAL -->
-    <div id="modalImprimirParte" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4 no-print">
-        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-            <div class="bg-[#004b87] text-white p-4 flex justify-between items-center">
-                <h3 class="font-bold text-base">📄 Vista Previa de Parte</h3>
-                <button onclick="cerrarModalImpresion()" class="text-white font-bold text-lg px-2 hover:bg-blue-900 rounded">✕</button>
-            </div>
-            <div id="contenidoModalImpresion" class="p-6 space-y-4 max-h-[70vh] overflow-y-auto font-sans">
-                <!-- Se inyecta el contenido dinámicamente -->
-            </div>
-            <div class="bg-gray-50 px-6 py-4 border-t flex justify-end gap-3">
-                <button onclick="cerrarModalImpresion()" class="px-4 py-2 bg-gray-200 text-gray-700 font-bold text-xs rounded-xl hover:bg-gray-300 transition">Cerrar</button>
-                <button onclick="window.print()" class="px-5 py-2 bg-[#ffcc00] text-[#004b87] font-extrabold text-xs rounded-xl shadow hover:bg-yellow-400 transition">🖨️ Imprimir / Guardar PDF</button>
-            </div>
-        </div>
-    </div>
+    <!-- ZONA AISLADA PARA IMPRESIÓN INDIVIDUAL -->
+    <div id="zonaImpresionIndividual" class="hidden"></div>
 
     <script>
         const nombresSecciones = { 'consulta': 'Consulta de Obras', 'partes': 'Mis Partes (Dedicación)' };
@@ -294,35 +281,51 @@
             } catch (e) { console.error(e); }
         }
 
-        function descargarParteIndividual(operario, obra, fecha, horas, tareas) {
-            const modal = document.getElementById('modalImprimirParte');
-            const contenedor = document.getElementById('contenidoModalImpresion');
+        function imprimirListadoCompleto() {
+            const panel = document.getElementById('panelResultados');
+            if (panel.classList.contains('hidden') || !panel.innerHTML.trim()) {
+                alert('⚠️ Primero debes realizar una consulta válida con resultados.');
+                return;
+            }
+            window.print();
+        }
 
-            contenedor.innerHTML = `
-                <div class="border-2 border-gray-800 p-6 rounded-lg space-y-4 bg-white">
-                    <div class="flex justify-between items-start border-b-2 border-gray-800 pb-3">
-                        <div class="flex items-center gap-2">
-                            <div class="w-10 h-10 bg-[#ffcc00] rounded-lg flex items-center justify-center font-black text-[#004b87] text-sm border-2 border-[#004b87]">CSV</div>
+        function descargarParteIndividual(operario, obra, fecha, horas, tareas) {
+            const zona = document.getElementById('zonaImpresionIndividual');
+            zona.innerHTML = `
+                <div class="bg-white p-8 max-w-2xl mx-auto space-y-6 font-sans border border-gray-300 rounded-lg">
+                    <div class="flex justify-between items-start border-b-2 border-gray-800 pb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-[#ffcc00] rounded-xl flex items-center justify-center font-black text-[#004b87] text-xl border-2 border-[#004b87]">CSV</div>
                             <div>
-                                <h1 class="text-sm font-extrabold text-gray-900">Parte de Trabajo Individual</h1>
-                                <p class="text-[10px] text-gray-600">CSV Construcción S.L.</p>
+                                <h1 class="text-lg font-extrabold text-gray-900">Parte de Trabajo Individual</h1>
+                                <p class="text-xs text-gray-600 font-medium">CSV Construcción S.L.</p>
                             </div>
                         </div>
-                        <div class="text-right text-[10px] text-gray-500 font-bold">Fecha: ${fecha}</div>
+                        <div class="text-right text-xs text-gray-500">
+                            <span class="font-bold text-gray-700">Fecha del parte:</span> <span>${fecha}</span>
+                        </div>
                     </div>
-                    <div class="text-xs space-y-2">
-                        <div><strong class="text-gray-700">Operario:</strong> ${operario}</div>
-                        <div><strong class="text-gray-700">Obra:</strong> ${obra}</div>
-                        <div><strong class="text-gray-700">Horas Trabajadas:</strong> <span class="text-[#004b87] font-bold">${horas}h</span></div>
-                        <div><strong class="text-gray-700">Descripción de Tareas:</strong><div class="bg-gray-50 p-2.5 rounded mt-1 border text-gray-800">${tareas}</div></div>
+                    <div class="space-y-4 text-sm">
+                        <div class="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border">
+                            <div><strong class="text-gray-700 block text-xs uppercase">Operario:</strong> ${operario}</div>
+                            <div><strong class="text-gray-700 block text-xs uppercase">Obra:</strong> ${obra}</div>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg border space-y-2">
+                            <div class="flex justify-between font-bold text-gray-800 border-b pb-2">
+                                <span>Total Horas Imputadas:</span>
+                                <span class="text-[#004b87] text-base">${horas}h</span>
+                            </div>
+                            <div><strong class="text-gray-700 block text-xs uppercase mb-1">Descripción de Tareas:</strong><div class="text-gray-600 bg-white p-3 rounded border">${tareas}</div></div>
+                        </div>
+                    </div>
+                    <div class="pt-6 border-t border-gray-200 flex justify-between text-xs text-gray-500 font-medium">
+                        <div>CSV Construcción S.L.</div>
+                        <div>Documento Oficial</div>
                     </div>
                 </div>
             `;
-            modal.classList.remove('hidden');
-        }
-
-        function cerrarModalImpresion() {
-            document.getElementById('modalImprimirParte').classList.add('hidden');
+            window.print();
         }
 
         function iniciarEdicion(id_parte, id_obra, nombreObra, fecha, horas, tareas) {
