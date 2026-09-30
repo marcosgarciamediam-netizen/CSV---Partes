@@ -161,7 +161,7 @@
                             </div>
                         </div>
                         <div class="mb-6 no-print flex flex-wrap gap-3">
-                            <button onclick="buscarPartesFiltrados()" class="bg-[#ffcc00] text-[#004b87] font-bold text-xs px-5 py-2.5 rounded-lg shadow hover:bg-yellow-400 transition">
+                            <button onclick="buscarPartesFiltrados(true)" class="bg-[#ffcc00] text-[#004b87] font-bold text-xs px-5 py-2.5 rounded-lg shadow hover:bg-yellow-400 transition">
                                 🔍 Aplicar Filtros
                             </button>
                             <button onclick="limpiarFiltros()" class="bg-gray-200 text-gray-700 font-bold text-xs px-4 py-2.5 rounded-lg hover:bg-gray-300 transition">
@@ -187,6 +187,17 @@
 
                             <div id="contenedorPlantillaPartes" class="space-y-6">
                                 <div class="text-center text-gray-400 py-8 text-sm">Selecciona los filtros y haz clic en "Aplicar Filtros".</div>
+                            </div>
+
+                            <!-- Controles de Paginación de 50 en 50 -->
+                            <div id="controlesPaginacion" class="flex justify-between items-center pt-6 mt-6 border-t border-gray-200 no-print hidden">
+                                <button onclick="paginaAnterior()" id="btnPagAnterior" class="bg-gray-200 text-gray-700 font-bold text-xs px-4 py-2 rounded-lg hover:bg-gray-300 transition disabled:opacity-50" disabled>
+                                    ⬅️ Anteriores (50)
+                                </button>
+                                <span id="textoPaginacion" class="text-xs font-bold text-[#004b87]">Mostrando registros 1 - 50</span>
+                                <button onclick="paginaSiguiente()" id="btnPagSiguiente" class="bg-[#ffcc00] text-[#004b87] font-bold text-xs px-4 py-2 rounded-lg shadow hover:bg-yellow-400 transition">
+                                    Siguientes (50) ➡️
+                                </button>
                             </div>
 
                             <div class="pt-6 border-t border-gray-200 flex justify-between text-xs text-gray-500 font-medium">
@@ -244,7 +255,7 @@
                                 <select id="categoriaUsuario" class="flex-1 border border-gray-300 p-2 rounded-lg text-sm outline-none bg-white font-semibold" required>
                                     <option value="">-- Selecciona Categoría --</option>
                                 </select>
-                                <button type="button" onclick="abrirModalCategorias()" class="bg-blue-50 text-[#004b87] border border-blue-200 px-3 py-2 rounded-lg text-xs font-bold hover:bg-blue-100 transition" title="Gestionar Categorías">⚙️️ Gestionar</button>
+                                <button type="button" onclick="abrirModalCategorias()" class="bg-blue-50 text-[#004b87] border border-blue-200 px-3 py-2 rounded-lg text-xs font-bold hover:bg-blue-100 transition" title="Gestionar Categorías">⚙ Gestionar</button>
                             </div>
 
                             <button type="submit" class="bg-[#ffcc00] text-[#004b87] font-bold text-xs px-5 py-2.5 rounded-lg shadow hover:bg-yellow-400 transition sm:col-span-2 lg:col-span-3">
@@ -592,8 +603,12 @@
 
         let todosLosUsuariosGlobal = [];
         let listaObrasGlobalAdmin = [];
-        
         let categoriasGlobales = ['Encargado', 'OF 1ª', 'OF 1ª Camionero', 'OF 1ª Encof', 'OF 1ª Pintor', 'OF 2ª', 'Peón'];
+
+        // Variables de Paginación para Partes
+        let paginaActualOffset = 0;
+        const limitePorPagina = 50;
+        const maxRegistrosDefault = 200;
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -636,7 +651,7 @@
             await cargarObrasGlobalesAdmin();
             await cargarAlertas();
             await cargarFiltrosPartes();
-            await buscarPartesFiltrados();
+            await buscarPartesFiltrados(true);
         });
 
         function cargarCategoriasGuardadas() {
@@ -813,7 +828,7 @@
                         if (data.success) { 
                             alert('✅ Parte descartado e incompleto registrado correctamente (0h).'); 
                             await cargarAlertas(); 
-                            await buscarPartesFiltrados(); 
+                            await buscarPartesFiltrados(true); 
                         } else { 
                             alert('❌ Error al registrar el parte descartado.'); 
                         }
@@ -901,7 +916,7 @@
                 if (obraEncontrada) { id_obra = obraEncontrada.id_obra; }
             }
 
-            if (!id_obra) { alert('⚠️️ Por favor, selecciona una obra de la lista haciendo clic sobre ella.'); return; }
+            if (!id_obra) { alert('⚠ Por favor, selecciona una obra de la lista haciendo clic sobre ella.'); return; }
 
             let endpointTipo = tipo;
             if (tipo === 'hacer_parte') endpointTipo = 'trabajo';
@@ -917,7 +932,7 @@
                     alert('✅ ¡Registrado con éxito!'); 
                     cerrarModalAccion();
                     await cargarAlertas(); 
-                    await buscarPartesFiltrados(); 
+                    await buscarPartesFiltrados(true); 
                 } else { alert('❌ Error al registrar.'); }
             } catch(e) { console.error(e); }
         }
@@ -989,7 +1004,7 @@
                 if (resultado.success) {
                     alert('✅ ¡Parte modificado correctamente!');
                     cerrarModalEdicion();
-                    await buscarPartesFiltrados();
+                    await buscarPartesFiltrados(false);
                 } else {
                     alert('❌ Error del servidor: ' + (resultado.error || 'No se pudo modificar el parte.'));
                 }
@@ -1016,14 +1031,25 @@
             } catch(e) { console.error(e); }
         }
 
-        async function buscarPartesFiltrados() {
+        async function buscarPartesFiltrados(resetOffset = true) {
+            if (resetOffset) {
+                paginaActualOffset = 0;
+            }
+
             const op = document.getElementById('filtroOperario').value;
             const obra = document.getElementById('filtroObra').value;
             const fechaInicio = document.getElementById('filtroFechaInicio').value;
             const fechaFin = document.getElementById('filtroFechaFin').value;
 
+            const hayFiltrosActivos = op || obra || fechaInicio || fechaFin;
+
+            if (!hayFiltrosActivos && paginaActualOffset >= maxRegistrosDefault) {
+                alert('⚠️ Has alcanzado el límite de los últimos 200 partes. Utiliza los filtros de fecha para consultar registros anteriores.');
+                return;
+            }
+
             try {
-                const url = `/api/admin/partes-filtrados?id_usuario=${op}&id_obra=${obra}&fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`;
+                const url = `/api/admin/partes-filtrados?id_usuario=${op}&id_obra=${obra}&fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}&limit=${limitePorPagina}&offset=${paginaActualOffset}`;
                 const res = await fetch(url);
                 const data = await res.json();
                 const contenedor = document.getElementById('contenedorPlantillaPartes');
@@ -1031,14 +1057,22 @@
 
                 if (data.success) {
                     if (data.partes.length === 0) {
-                        contenedor.innerHTML = `<div class="p-4 text-center text-gray-500 text-sm">No se encontraron partes con los filtros seleccionados.</div>`;
-                        document.getElementById('infoPeriodo').textContent = `Período: Sin registros`;
+                        if (paginaActualOffset === 0) {
+                            contenedor.innerHTML = `<div class="p-4 text-center text-gray-500 text-sm">No se encontraron partes con los filtros seleccionados.</div>`;
+                            document.getElementById('infoPeriodo').textContent = `Período: Sin registros`;
+                        } else {
+                            alert('No hay más registros disponibles.');
+                            paginaActualOffset -= limitePorPagina;
+                        }
+                        document.getElementById('controlesPaginacion').classList.add('hidden');
                         return;
                     }
 
+                    document.getElementById('controlesPaginacion').classList.remove('hidden');
+
                     if (fechaInicio && fechaFin) { document.getElementById('infoPeriodo').textContent = `Período: ${fechaInicio} -> ${fechaFin}`;
                     } else if (fechaInicio) { document.getElementById('infoPeriodo').textContent = `Período: Desde ${fechaInicio}`;
-                    } else { document.getElementById('infoPeriodo').textContent = `Período: Histórico Filtrado`; }
+                    } else { document.getElementById('infoPeriodo').textContent = `Período: Últimos Partes Registrados`; }
 
                     let totalHorasGlobal = 0;
 
@@ -1062,7 +1096,7 @@
                                 <span>${p.operario_nombre}</span>
                                 <div class="flex items-center gap-2">
                                     ${etiquetaTipo}
-                                    <button onclick="abrirModalEditarParte(${p.id_parte}, ${p.horas}, '${(p.tareas||'').replace(/'/g, "\\'")}', ${p.id_obra}, '${(p.obra_nombre||'').replace(/'/g, "\\'")}', '${fechaLimpia}')" class="bg-yellow-50 hover:bg-yellow-100 text-[#004b87] px-3 py-1 rounded text-xs font-bold transition border border-yellow-200 shadow-sm">✏️️ Editar</button>
+                                    <button onclick="abrirModalEditarParte(${p.id_parte}, ${p.horas}, '${(p.tareas||'').replace(/'/g, "\\'")}', ${p.id_obra}, '${(p.obra_nombre||'').replace(/'/g, "\\'")}', '${fechaLimpia}')" class="bg-yellow-50 hover:bg-yellow-100 text-[#004b87] px-3 py-1 rounded text-xs font-bold transition border border-yellow-200 shadow-sm">✏️ Editar</button>
                                 </div>
                             </div>
                             <div class="text-xs font-semibold text-[#004b87] bg-yellow-50 p-2 rounded border border-yellow-200">
@@ -1086,20 +1120,42 @@
                         contenedor.appendChild(bloque);
                     });
 
+                    const inicioRango = paginaActualOffset + 1;
+                    const finRango = paginaActualOffset + data.partes.length;
+                    document.getElementById('textoPaginacion').textContent = `Mostrando registros ${inicioRango} - ${finRango}`;
+                    
+                    document.getElementById('btnPagAnterior').disabled = paginaActualOffset === 0;
+                    document.getElementById('btnPagSiguiente').disabled = data.partes.length < limitePorPagina || (!hayFiltrosActivos && finRango >= maxRegistrosDefault);
+
                     if (data.partes.length > 1) {
                         const totalDiv = document.createElement('div');
                         totalDiv.className = 'text-right font-extrabold text-sm text-[#004b87] pt-2';
-                        totalDiv.textContent = `Total Acumulado del Informe: ${totalHorasGlobal}h`;
+                        totalDiv.textContent = `Total Acumulado en Página: ${totalHorasGlobal}h`;
                         contenedor.appendChild(totalDiv);
                     }
                 }
             } catch (e) { console.error('Error al generar vista de partes:', e); }
         }
 
+        function paginaSiguiente() {
+            paginaActualOffset += limitePorPagina;
+            buscarPartesFiltrados(false);
+        }
+
+        function paginaAnterior() {
+            if (paginaActualOffset >= limitePorPagina) {
+                paginaActualOffset -= limitePorPagina;
+                buscarPartesFiltrados(false);
+            }
+        }
+
         function limpiarFiltros() {
-            document.getElementById('filtroOperario').value = ''; document.getElementById('filtroObra').value = '';
-            document.getElementById('filtroFechaInicio').value = ''; document.getElementById('filtroFechaFin').value = '';
-            buscarPartesFiltrados();
+            document.getElementById('filtroOperario').value = ''; 
+            document.getElementById('filtroObra').value = '';
+            document.getElementById('filtroFechaInicio').value = ''; 
+            document.getElementById('filtroFechaFin').value = '';
+            paginaActualOffset = 0;
+            buscarPartesFiltrados(true);
         }
 
         async function cargarObrasAdmin() {
@@ -1223,7 +1279,7 @@
                             <span class="text-xs px-2 py-0.5 rounded font-bold ${estadoClase}">${textoEstado}</span>
                         </div>
                         <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-                            <button onclick="editarUsuario(${u.id_usuario}, '${u.nombre}', '${u.email}', '${u.rol}', '${u.categoria || ''}', '${u.codigo_operario || ''}')" class="text-xs font-bold px-3 py-1 bg-blue-50 text-[#004b87] hover:bg-blue-100 rounded transition">✏️ Editar</button>
+                            <button onclick="editarUsuario(${u.id_usuario}, '${u.nombre}', '${u.email}', '${u.rol}', '${u.categoria || ''}', '${u.codigo_operario || ''}')" class="text-xs font-bold px-3 py-1 bg-blue-50 text-[#004b87] hover:bg-blue-100 rounded transition">✏️️ Editar</button>
                             <button onclick="restablecerPassword(${u.id_usuario}, '${u.nombre.replace(/'/g, "\\'")}')" class="text-xs font-bold px-3 py-1 bg-yellow-50 text-amber-700 hover:bg-yellow-100 rounded transition">🔑 Contraseña</button>
                             <button onclick="toggleEstadoUsuario(${u.id_usuario}, ${!u.activo})" class="text-xs font-bold px-3 py-1 rounded transition ${botonEstadoClase}">${botonEstadoTexto}</button>
                         </div>
