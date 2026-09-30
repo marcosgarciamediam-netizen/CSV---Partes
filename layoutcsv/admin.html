@@ -116,7 +116,7 @@
                 <section id="seccion-dashboard" class="vista-panel space-y-6">
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                         <h2 class="text-lg font-bold text-red-700 flex items-center gap-2 mb-3">
-                            ⚠️️ Alertas: Partes Pendientes de Hoy
+                            ⚠ Alertas: Partes Pendientes de Hoy
                         </h2>
                         <p class="text-xs text-gray-500 mb-4">Operarios sin parte registrado en la fecha actual. Selecciona una acción para asignar partes o ausencias:</p>
                         <div id="listaAlertas" class="space-y-3">
@@ -423,6 +423,56 @@
         </div>
     </div>
 
+    <!-- Modal para Editar Usuario -->
+    <div id="modalEditarUsuario" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-[#004b87] text-white p-4 flex justify-between items-center">
+                <h3 class="font-bold text-base">✏️ Modificar Datos del Trabajador</h3>
+                <button onclick="cerrarModalEditarUsuario()" class="text-white font-bold text-lg px-2 hover:bg-blue-900 rounded">✕</button>
+            </div>
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                <input type="hidden" id="editUserId" />
+                
+                <div>
+                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Código de Empleado</label>
+                    <input type="text" id="editUserCodigo" class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 font-bold" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Nombre y Apellidos</label>
+                    <input type="text" id="editUserNombre" class="w-full border p-2.5 rounded-xl text-sm bg-gray-50" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Correo Electrónico</label>
+                    <input type="email" id="editUserEmail" class="w-full border p-2.5 rounded-xl text-sm bg-gray-50" />
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Rol en el Sistema</label>
+                        <select id="editUserRol" class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 font-semibold">
+                            <option value="operario">Operario</option>
+                            <option value="encargado">Encargado</option>
+                            <option value="jefe_de_obra">Jefe de Obra</option>
+                            <option value="admin">Administrador</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Categoría Profesional</label>
+                        <select id="editUserCategoria" class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 font-semibold">
+                            <!-- Se rellena dinámicamente -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-6 py-4 border-t flex justify-end gap-3">
+                <button onclick="cerrarModalEditarUsuario()" class="px-4 py-2 bg-gray-200 text-gray-700 font-bold text-xs rounded-xl hover:bg-gray-300 transition">Cancelar</button>
+                <button onclick="guardarEdicionUsuarioModal()" class="px-5 py-2 bg-[#ffcc00] text-[#004b87] font-extrabold text-xs rounded-xl shadow hover:bg-yellow-400 transition">💾 Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal para Gestionar Categorías Profesionales -->
     <div id="modalCategorias" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -559,10 +609,16 @@
 
         function renderizarSelectCategorias() {
             const select = document.getElementById('categoriaUsuario');
-            if (!select) return;
-            select.innerHTML = '<option value="">-- Selecciona Categoría --</option>';
-            categoriasGlobales.forEach(cat => {
-                select.innerHTML += `<option value="${cat}">${cat}</option>`;
+            const selectEdit = document.getElementById('editUserCategoria');
+            
+            [select, selectEdit].forEach(s => {
+                if (!s) return;
+                const valorActual = s.value;
+                s.innerHTML = '<option value="">-- Selecciona Categoría --</option>';
+                categoriasGlobales.forEach(cat => {
+                    s.innerHTML += `<option value="${cat}">${cat}</option>`;
+                });
+                s.value = valorActual;
             });
         }
 
@@ -1047,17 +1103,49 @@
             } catch(err) { console.error(err); }
         }
 
-        async function editarUsuario(idUsuario, nombreAct, emailAct, rolAct, catAct, codAct) {
-            const nuevoNombre = prompt("Editar Nombre y Apellidos:", nombreAct); if (nuevoNombre === null) return;
-            const nuevoEmail = prompt("Editar Correo Electrónico:", emailAct); if (nuevoEmail === null) return;
-            const nuevoRol = prompt("Editar Rol (admin, encargado, jefe_de_obra, operario):", rolAct); if (nuevoRol === null) return;
-            const nuevaCat = prompt("Editar Categoría Profesional:", catAct); if (nuevaCat === null) return;
-            const nuevoCod = prompt("Editar Código de Empleado:", codAct); if (nuevoCod === null) return;
+        function editarUsuario(idUsuario, nombreAct, emailAct, rolAct, catAct, codAct) {
+            document.getElementById('editUserId').value = idUsuario;
+            document.getElementById('editUserCodigo').value = codAct;
+            document.getElementById('editUserNombre').value = nombreAct;
+            document.getElementById('editUserEmail').value = emailAct;
+            document.getElementById('editUserRol').value = rolAct;
+            
+            renderizarSelectCategorias();
+            document.getElementById('editUserCategoria').value = catAct;
+            
+            document.getElementById('modalEditarUsuario').classList.remove('hidden');
+        }
+
+        function cerrarModalEditarUsuario() {
+            document.getElementById('modalEditarUsuario').classList.add('hidden');
+        }
+
+        async function guardarEdicionUsuarioModal() {
+            const idUsuario = document.getElementById('editUserId').value;
+            const nuevoCod = document.getElementById('editUserCodigo').value;
+            const nuevoNombre = document.getElementById('editUserNombre').value;
+            const nuevoEmail = document.getElementById('editUserEmail').value;
+            const nuevoRol = document.getElementById('editUserRol').value;
+            const nuevaCat = document.getElementById('editUserCategoria').value;
 
             try {
-                const res = await fetch(`/api/admin/usuarios/${idUsuario}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre: nuevoNombre, email: nuevoEmail, rol: nuevoRol, categoria: nuevaCat, codigo_operario: nuevoCod }) });
-                if ((await res.json()).success) { alert('✅ ¡Usuario modificado correctamente!'); cargarUsuariosAdmin(); } else { alert('❌ Error al modificar el usuario.'); }
-            } catch (err) { console.error('Error de conexión:', err); alert('❌ No se pudo conectar con el servidor.'); }
+                const res = await fetch(`/api/admin/usuarios/${idUsuario}`, { 
+                    method: 'PUT', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ nombre: nuevoNombre, email: nuevoEmail, rol: nuevoRol, categoria: nuevaCat, codigo_operario: nuevoCod }) 
+                });
+                const data = await res.json();
+                if (data.success) { 
+                    alert('✅ ¡Usuario modificado correctamente!'); 
+                    cerrarModalEditarUsuario();
+                    cargarUsuariosAdmin(); 
+                } else { 
+                    alert('❌ Error al modificar el usuario: ' + (data.error || '')); 
+                }
+            } catch (err) { 
+                console.error('Error de conexión:', err); 
+                alert('❌ No se pudo conectar con el servidor.'); 
+            }
         }
 
         async function restablecerPassword(idUsuario, nombreOperario) {
