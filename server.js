@@ -166,7 +166,6 @@ app.get('/api/admin/partes-filtrados', async (req, res) => {
     const params = [];
     let index = 1;
 
-    // Verificamos estrictamente que id_usuario llegue y sea válido
     if (id_usuario && id_usuario !== '' && id_usuario !== 'undefined' && id_usuario !== 'null') {
       query += ` AND pt.id_usuario = $${index++}`; 
       params.push(id_usuario);
@@ -247,23 +246,53 @@ app.get('/api/encargado/:id_encargado/partes', async (req, res) => {
 });
 
 // ==========================================
-// RUTA: Obtener alertas de operarios sin parte hoy
+// RUTA: Obtener alertas de operarios con partes pendientes (agrupados por fechas)
 // ==========================================
 app.get('/api/admin/alertas', async (req, res) => {
   try {
-    const query = `
-      SELECT u.id_usuario, u.codigo_operario, u.nombre, u.email 
-      FROM usuarios u 
-      WHERE u.rol = 'operario' 
-      AND u.id_usuario NOT IN (
-        SELECT DISTINCT id_usuario 
-        FROM partes_trabajo 
-        WHERE fecha = CURRENT_DATE
-      );
-    `;
-    const resultado = await pool.query(query);
+    const resOps = await pool.query(`
+      SELECT id_usuario, codigo_operario, nombre, email 
+      FROM usuarios 
+      WHERE rol = 'operario' AND activo = true
+      ORDER BY nombre ASC;
+    `);
 
-    res.json({ success: true, alertas: resultado.rows });
+    const operarios = resOps.rows;
+    const alertasFinales = [];
+
+    const hoy = new Date();
+    const fechasRevisar = [];
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(hoy);
+      d.setDate(hoy.getDate() - i);
+      const diaSemana = d.getDay();
+      if (diaSemana !== 0 && diaSemana !== 6) {
+        fechasRevisar.push(d.toISOString().split('T')[0]);
+      }
+    }
+
+    for (const op of operarios) {
+      const resPartes = await pool.query(`
+        SELECT TO_CHAR(fecha, 'YYYY-MM-DD') AS fecha_str 
+        FROM partes_trabajo 
+        WHERE id_usuario = $1 AND fecha = ANY($2::date[]);
+      `, [op.id_usuario, fechasRevisar]);
+
+      const fechasRegistradas = new Set(resPartes.rows.map(r => r.fecha_str));
+      const fechasPendientes = fechasRevisar.filter(f => !fechasRegistradas.has(f)).sort();
+
+      if (fechasPendientes.length > 0) {
+        alertasFinales.push({
+          id_usuario: op.id_usuario,
+          codigo_operario: op.codigo_operario,
+          nombre: op.nombre,
+          email: op.email,
+          fechas_pendientes: fechasPendientes
+        });
+      }
+    }
+
+    res.json({ success: true, alertas: alertasFinales });
   } catch (error) {
     console.error('Error al obtener alertas de admin:', error);
     res.status(500).json({ success: false, error: 'Error interno en el servidor' });
@@ -316,6 +345,21 @@ app.put('/api/admin/obras/:id/estado', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Error al cambiar estado de obra:', error);
+    res.status(500).json({ success: false, error: 'Error interno en el servidor' });
+  }
+});
+
+app.put('/api/admin/obras/:id', async (req, res) => {
+  const { id } = req.params;
+  const { nombre } = req.body;
+  try {
+    const resultado = await pool.query('UPDATE obras SET nombre = $1 WHERE id_obra = $2 RETURNING *;', [nombre, id]);
+    if (resultado.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Obra no encontrada' });
+    }
+    res.json({ success: true, obra: resultado.rows[0] });
+  } catch (error) {
+    console.error('Error al actualizar obra:', error);
     res.status(500).json({ success: false, error: 'Error interno en el servidor' });
   }
 });
@@ -568,7 +612,7 @@ app.get('/api/jefe/:id_jefe/obras', async (req, res) => {
 const ExcelJS = require('exceljs');
 
 // ==========================================
-// RUTA: Exportar Quincena en Formato Matricial Excel Real (.xlsx) con Formato Numérico
+// RUTA: Exportar Quincena en Formato Matricial Excel Real (.xlsx)
 // ==========================================
 app.get('/api/admin/exportar', async (req, res) => {
   const { inicio, fin } = req.query;
@@ -628,7 +672,6 @@ app.get('/api/admin/exportar', async (req, res) => {
     });
 
     const letrasDiasMap = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
-
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Informe Quincenal');
 
@@ -651,7 +694,6 @@ app.get('/api/admin/exportar', async (req, res) => {
     Object.values(obrasMap).forEach(obra => {
       let totalHorasObra = 0;
 
-      // 1. Cabecera de letras
       const filaLetras = ['Código', 'Operario', 'Categoría', 'Obra'];
       diasArray.forEach(d => filaLetras.push(letrasDiasMap[d.getDay()]));
       filaLetras.push('Total Horas');
@@ -664,7 +706,6 @@ app.get('/api/admin/exportar', async (req, res) => {
         cell.alignment = { horizontal: 'center', vertical: 'middle' };
       });
 
-      // 2. Cabecera de números de días (como valores numéricos reales)
       const filaNumeros = [obra.nombre, '', '', ''];
       diasArray.forEach(d => filaNumeros.push(d.getDate()));
       filaNumeros.push('');
@@ -672,7 +713,6 @@ app.get('/api/admin/exportar', async (req, res) => {
       const rNum = sheet.addRow(filaNumeros);
       rNum.font = { bold: true, color: { argb: 'FF004B87' } };
       
-      // Forzar celdas de números de días como tipo número
       diasArray.forEach((d, idx) => {
         const cell = rNum.getCell(5 + idx);
         cell.value = d.getDate();
@@ -686,7 +726,6 @@ app.get('/api/admin/exportar', async (req, res) => {
       });
       sheet.mergeCells(`A${rNum.number}:D${rNum.number}`);
 
-      // 3. Filas de Operarios
       Object.values(obra.operarios).forEach(op => {
         const filaOp = [op.codigo, op.nombre, op.categoria, op.obraNombre];
         let sumaOp = 0;
@@ -699,28 +738,11 @@ app.get('/api/admin/exportar', async (req, res) => {
           let tipoCelda = 'trabajo';
 
           if (celdaData) {
-            if (celdaData.tipo === 'vacaciones') { 
-              contenido = 'V'; 
-              tipoCelda = 'vacaciones'; 
-            }
-            else if (celdaData.tipo === 'baja') { 
-              contenido = 'B'; 
-              tipoCelda = 'baja'; 
-            }
-            else if (celdaData.tipo === 'paternidad') { 
-              contenido = 'P'; 
-              tipoCelda = 'permiso'; 
-            }
-            else if (celdaData.tipo === 'permiso') { 
-              contenido = parseFloat(celdaData.val || 0); 
-              tipoCelda = 'permiso'; 
-              sumaOp += contenido; 
-            }
-            else { 
-              contenido = parseFloat(celdaData.val || 0); 
-              tipoCelda = 'trabajo'; 
-              sumaOp += contenido; 
-            }
+            if (celdaData.tipo === 'vacaciones') { contenido = 'V'; tipoCelda = 'vacaciones'; }
+            else if (celdaData.tipo === 'baja') { contenido = 'B'; tipoCelda = 'baja'; }
+            else if (celdaData.tipo === 'paternidad') { contenido = 'P'; tipoCelda = 'permiso'; }
+            else if (celdaData.tipo === 'permiso') { contenido = parseFloat(celdaData.val || 0); tipoCelda = 'permiso'; sumaOp += contenido; }
+            else { contenido = parseFloat(celdaData.val || 0); tipoCelda = 'trabajo'; sumaOp += contenido; }
           }
           filaOp.push(contenido);
           tiposDiasArray.push(tipoCelda);
@@ -733,13 +755,11 @@ app.get('/api/admin/exportar', async (req, res) => {
         rOp.border = estiloBordeFino;
         rOp.alignment = { vertical: 'middle' };
 
-        // Asegurar formato numérico en las horas y aplicar colores
         diasArray.forEach((d, idx) => {
           const colIndex = 5 + idx;
           const cell = rOp.getCell(colIndex);
           cell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-          // Si es un número (horas trabajadas o permiso numérico), asignar formato decimal de Excel
           if (typeof cell.value === 'number') {
             cell.numFmt = '#,##0.0';
           }
@@ -765,12 +785,10 @@ app.get('/api/admin/exportar', async (req, res) => {
           }
         });
 
-        // Formato para la celda de Total Horas de la fila
         const cellTotalOp = rOp.getCell(rOp.cellCount);
         cellTotalOp.numFmt = '#,##0.0';
       });
 
-      // 4. Fila Total Obra
       const filaTotal = [`Total ${obra.nombre}`];
       for(let i=0; i < diasArray.length + 3; i++) filaTotal.push('');
       filaTotal.push(Math.round(totalHorasObra * 10) / 10);
@@ -808,25 +826,23 @@ app.get('/api/admin/exportar', async (req, res) => {
 // ==========================================
 app.get('/api/admin/exportar-dedicacion-jefe/:id_jefe', async (req, res) => {
   const { id_jefe } = req.params;
-  const { mes, anio } = req.query;
+  const { mes, anio, inicio, fin } = req.query;
 
   const now = new Date();
   const targetAnio = anio ? parseInt(anio) : now.getFullYear();
-  const targetMes = mes ? parseInt(mes) : now.getMonth() + 1; // 1-12
+  const targetMes = mes ? parseInt(mes) : now.getMonth() + 1;
 
-  const inicioMes = `${targetAnio}-${String(targetMes).padStart(2, '0')}-01`;
+  const inicioMes = inicio || `${targetAnio}-${String(targetMes).padStart(2, '0')}-01`;
   const ultimoDia = new Date(targetAnio, targetMes, 0).getDate();
-  const finMes = `${targetAnio}-${String(targetMes).padStart(2, '0')}-${ultimoDia}`;
+  const finMes = fin || `${targetAnio}-${String(targetMes).padStart(2, '0')}-${ultimoDia}`;
 
   try {
-    // 1. Obtener nombre del jefe de obra
     const resJefe = await pool.query('SELECT nombre FROM usuarios WHERE id_usuario = $1', [id_jefe]);
     if (resJefe.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Jefe de obra no encontrado' });
     }
     const nombreJefe = resJefe.rows[0].nombre;
 
-    // 2. Obtener las obras asignadas a este jefe de obra
     const resObrasJefe = await pool.query(`
       SELECT o.id_obra, o.nombre 
       FROM asignacion_obras_jefe ao
@@ -841,7 +857,6 @@ app.get('/api/admin/exportar-dedicacion-jefe/:id_jefe', async (req, res) => {
       return res.status(400).send('Este jefe de obra no tiene obras asignadas actualmente.');
     }
 
-    // 3. Consultar las horas registradas en esas obras durante el mes
     const resHoras = await pool.query(`
       SELECT pt.id_obra, SUM(pt.horas) AS total_horas
       FROM partes_trabajo pt
@@ -858,7 +873,6 @@ app.get('/api/admin/exportar-dedicacion-jefe/:id_jefe', async (req, res) => {
       horasTotalesGlobal += h;
     });
 
-    // 4. Generar el Excel con ExcelJS
     const ExcelJS = require('exceljs');
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Dedicación Mensual');
@@ -870,15 +884,13 @@ app.get('/api/admin/exportar-dedicacion-jefe/:id_jefe', async (req, res) => {
       right: { style: 'thin', color: { argb: 'FFD3D3D3' } }
     };
 
-    // Título superior
-    sheet.addRow([`DEDICACIÓN MENSUAL DE JEFES DE OBRA - ${nombreJefe.toUpperCase()}`]);
+    sheet.addRow([`DEDICACIÓN DE JEFES DE OBRA - ${nombreJefe.toUpperCase()}`]);
     sheet.mergeCells('A1:C1');
     const rTitulo = sheet.getRow(1);
     rTitulo.font = { bold: true, size: 12, color: { argb: 'FF004B87' } };
     rTitulo.alignment = { horizontal: 'center', vertical: 'middle' };
-    sheet.addRow([]); // Fila vacía
+    sheet.addRow([]);
 
-    // Cabecera de la tabla
     const rCabecera = sheet.addRow(['Obra', 'Horas empleadas', 'Porcentaje']);
     rCabecera.font = { bold: true, color: { argb: 'FF000000' } };
     rCabecera.eachCell(cell => {
@@ -887,25 +899,21 @@ app.get('/api/admin/exportar-dedicacion-jefe/:id_jefe', async (req, res) => {
       cell.alignment = { horizontal: 'center', vertical: 'middle' };
     });
 
-    // Filas de Obras
     obrasAsignadas.forEach(obra => {
       const horasObra = horasPorObra[obra.id_obra] || 0;
       const porcentaje = horasTotalesGlobal > 0 ? (horasObra / horasTotalesGlobal) : 0;
 
       const fila = sheet.addRow([obra.nombre, horasObra, porcentaje]);
       
-      // Formato celda Obra
       fila.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
       fila.getCell(1).border = estiloBordeFino;
 
-      // Formato celda Horas (Numérico real)
       const cellHoras = fila.getCell(2);
       cellHoras.value = horasObra;
       cellHoras.numFmt = '#,##0.0';
       cellHoras.alignment = { horizontal: 'right', vertical: 'middle' };
       cellHoras.border = estiloBordeFino;
 
-      // Formato celda Porcentaje (Numérico real con formato porcentaje)
       const cellPorc = fila.getCell(3);
       cellPorc.value = porcentaje;
       cellPorc.numFmt = '0.0%';
@@ -913,7 +921,6 @@ app.get('/api/admin/exportar-dedicacion-jefe/:id_jefe', async (req, res) => {
       cellPorc.border = estiloBordeFino;
     });
 
-    // Fila Total
     const filaTotal = sheet.addRow(['Total', horasTotalesGlobal, horasTotalesGlobal > 0 ? 1 : 0]);
     filaTotal.font = { bold: true, color: { argb: 'FF004B87' } };
     filaTotal.eachCell((cell, colNumber) => {
@@ -932,11 +939,10 @@ app.get('/api/admin/exportar-dedicacion-jefe/:id_jefe', async (req, res) => {
       }
     });
 
-    // Ajustar anchos de columna
     sheet.columns = [
-      { width: 45 }, // Obra
-      { width: 22 }, // Horas
-      { width: 22 }  // Porcentaje
+      { width: 45 },
+      { width: 22 },
+      { width: 22 }
     ];
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -951,7 +957,9 @@ app.get('/api/admin/exportar-dedicacion-jefe/:id_jefe', async (req, res) => {
   }
 });
 
-// Endpoint para obtener el resumen de horas imputadas por los Jefes de Obra
+// ==========================================
+// RUTA: Resumen de horas imputadas por los Jefes de Obra
+// ==========================================
 app.get('/api/admin/resumen-jefes-dedicacion', async (req, res) => {
     const { inicio, fin } = req.query;
     if (!inicio || !fin) {
@@ -973,7 +981,6 @@ app.get('/api/admin/resumen-jefes-dedicacion', async (req, res) => {
     }
 });
 
-
 // ==========================================
 // RUTA: Eliminar un parte de trabajo
 // ==========================================
@@ -993,7 +1000,6 @@ app.delete('/api/partes/:id_parte', async (req, res) => {
     res.status(500).json({ success: false, error: 'Error interno en el servidor' });
   }
 });
-
 
 // ==========================================
 // RUTA: Obtener total de horas de un jefe de obra en un rango exacto
@@ -1017,7 +1023,6 @@ app.get('/api/admin/jefe-total-horas/:id_usuario', async (req, res) => {
     res.status(500).json({ success: false, error: 'Error interno en el servidor' });
   }
 });
-
 
 // ==========================================
 // ENCENDIDO DEL SERVIDOR
