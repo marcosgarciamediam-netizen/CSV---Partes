@@ -147,10 +147,10 @@ app.put('/api/partes/:id_parte', async (req, res) => {
 });
 
 // ==========================================
-// RUTA: Consultar partes filtrados (Operario, Obra y Rango de Fechas)
+// RUTA: Consultar partes filtrados (con soporte de Paginación y Límites)
 // ==========================================
 app.get('/api/admin/partes-filtrados', async (req, res) => {
-  const { id_usuario, id_obra, fecha_inicio, fecha_fin } = req.query;
+  const { id_usuario, id_obra, fecha_inicio, fecha_fin, limit, offset } = req.query;
 
   try {
     let query = `
@@ -185,9 +185,18 @@ app.get('/api/admin/partes-filtrados', async (req, res) => {
       params.push(fecha_fin);
     }
 
-    query += ` ORDER BY pt.fecha DESC, u.nombre ASC;`;
-    const resultado = await pool.query(query, params);
+    query += ` ORDER BY pt.fecha DESC, pt.id_parte DESC`;
 
+    if (limit) {
+      query += ` LIMIT $${index++}`;
+      params.push(parseInt(limit));
+    }
+    if (offset) {
+      query += ` OFFSET $${index++}`;
+      params.push(parseInt(offset));
+    }
+
+    const resultado = await pool.query(query, params);
     res.json({ success: true, partes: resultado.rows });
   } catch (error) {
     console.error('Error al filtrar partes:', error);
@@ -463,9 +472,12 @@ app.post('/api/admin/estado-especial', async (req, res) => {
       RETURNING *;
     `;
     const obraId = id_obra || 1;
-    const resultado = await pool.query(query, [id_usuario, obraId, fecha, horas, tareas, tipo]);
+    const horasFinales = (horas !== undefined && horas !== null) ? horas : 0;
+    const tipoFinal = tipo === 'descartar' ? 'trabajo' : tipo; 
 
-    res.json({ success: true, mensaje: '¡Estado asignado correctamente!', parte: resultado.rows[0] });
+    const resultado = await pool.query(query, [id_usuario, obraId, fecha, horasFinales, tareas || 'Día descartado', tipoFinal]);
+
+    res.json({ success: true, mensaje: '¡Parte registrado correctamente!', parte: resultado.rows[0] });
   } catch (error) {
     console.error('Error al asignar estado especial:', error);
     res.status(500).json({ success: false, error: 'Error interno en el servidor' });
