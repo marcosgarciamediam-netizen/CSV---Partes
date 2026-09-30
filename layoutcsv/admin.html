@@ -116,7 +116,7 @@
                 <section id="seccion-dashboard" class="vista-panel space-y-6">
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                         <h2 class="text-lg font-bold text-red-700 flex items-center gap-2 mb-3">
-                            ⚠️ Alertas: Partes Pendientes de Hoy
+                            ⚠️️ Alertas: Partes Pendientes de Hoy
                         </h2>
                         <p class="text-xs text-gray-500 mb-4">Operarios sin parte registrado en la fecha actual. Selecciona una acción para asignar partes o ausencias:</p>
                         <div id="listaAlertas" class="space-y-3">
@@ -226,6 +226,7 @@
                             </div>
                         </div>
 
+                        <!-- Formulario de Registro de Usuario -->
                         <form id="formNuevoUsuario" onsubmit="crearUsuario(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
                             <input type="text" id="codigoOperario" placeholder="Código de Empleado (ej: 564)" class="border border-gray-300 p-2 rounded-lg text-sm outline-none bg-white font-bold" required />
                             <input type="text" id="nombreUsuario" placeholder="Nombre y Apellidos" class="border border-gray-300 p-2 rounded-lg text-sm outline-none bg-white" required />
@@ -237,7 +238,15 @@
                                 <option value="jefe_de_obra">Jefe de Obra</option>
                                 <option value="admin">Administrador</option>
                             </select>
-                            <input type="text" id="categoriaUsuario" placeholder="Categoría (ej: Electricidad)" class="border border-gray-300 p-2 rounded-lg text-sm outline-none bg-white" required />
+                            
+                            <!-- Desplegable y gestión de Categorías Profesionales -->
+                            <div class="flex gap-2">
+                                <select id="categoriaUsuario" class="flex-1 border border-gray-300 p-2 rounded-lg text-sm outline-none bg-white font-semibold" required>
+                                    <option value="">-- Selecciona Categoría --</option>
+                                </select>
+                                <button type="button" onclick="abrirModalCategorias()" class="bg-blue-50 text-[#004b87] border border-blue-200 px-3 py-2 rounded-lg text-xs font-bold hover:bg-blue-100 transition" title="Gestionar Categorías">⚙️ Gestionar</button>
+                            </div>
+
                             <button type="submit" class="bg-[#ffcc00] text-[#004b87] font-bold text-xs px-5 py-2.5 rounded-lg shadow hover:bg-yellow-400 transition sm:col-span-2 lg:col-span-3">
                                 ➕ Registrar Nuevo Trabajador
                             </button>
@@ -414,6 +423,29 @@
         </div>
     </div>
 
+    <!-- Modal para Gestionar Categorías Profesionales -->
+    <div id="modalCategorias" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-[#004b87] text-white p-4 flex justify-between items-center">
+                <h3 class="font-bold text-base">⚙️ Gestionar Categorías Profesionales</h3>
+                <button onclick="cerrarModalCategorias()" class="text-white font-bold text-lg px-2 hover:bg-blue-900 rounded">✕</button>
+            </div>
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                <div class="flex gap-2">
+                    <input type="text" id="nuevaCategoriaInput" placeholder="Nueva categoría (ej: Oficial 3ª)..." class="flex-1 border p-2.5 rounded-xl text-sm bg-gray-50 outline-none" />
+                    <button type="button" onclick="agregarCategoria()" class="bg-[#ffcc00] text-[#004b87] font-extrabold text-xs px-4 rounded-xl shadow hover:bg-yellow-400 transition">➕ Añadir</button>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Categorías Actuales:</label>
+                    <div id="listaCategoriasModal" class="border rounded-xl max-h-60 overflow-y-auto divide-y divide-gray-100 bg-gray-50 p-2"></div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-6 py-4 border-t flex justify-end">
+                <button onclick="cerrarModalCategorias()" class="px-5 py-2 bg-[#004b87] text-white font-bold text-xs rounded-xl shadow hover:bg-blue-900 transition">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <div id="modalAccionRapida" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="bg-[#004b87] text-white p-4 flex justify-between items-center">
@@ -464,6 +496,9 @@
 
         let todosLosUsuariosGlobal = [];
         let listaObrasGlobalAdmin = [];
+        
+        // Categorías iniciales solicitadas
+        let categoriasGlobales = ['Encargado', 'OF 1ª', 'OF 1ª Camionero', 'OF 1ª Encof', 'OF 1ª Pintor', 'OF 2ª', 'Peón'];
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -488,7 +523,7 @@
             toggleSidebar();
 
             if (nombreVista === 'obras') cargarObrasAdmin();
-            if (nombreVista === 'usuarios') cargarUsuariosAdmin();
+            if (nombreVista === 'usuarios') { cargarCategoriasGuardadas(); cargarUsuariosAdmin(); }
             if (nombreVista === 'asignaciones') cargarDatosAsignaciones();
             if (nombreVista === 'dedicacion') cargarJefesDedicacion();
         }
@@ -502,11 +537,89 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('fechaEmision').textContent = new Date().toLocaleDateString('es-ES');
+            cargarCategoriasGuardadas();
             await cargarObrasGlobalesAdmin();
             await cargarAlertas();
             await cargarFiltrosPartes();
             await buscarPartesFiltrados();
         });
+
+        // Gestión de Categorías Profesionales en localStorage
+        function cargarCategoriasGuardadas() {
+            const guardadas = localStorage.getItem('csv_categorias_profesionales');
+            if (guardadas) {
+                try {
+                    categoriasGlobales = JSON.parse(guardadas);
+                } catch(e) { console.error(e); }
+            } else {
+                localStorage.setItem('csv_categorias_profesionales', JSON.stringify(categoriasGlobales));
+            }
+            renderizarSelectCategorias();
+        }
+
+        function renderizarSelectCategorias() {
+            const select = document.getElementById('categoriaUsuario');
+            if (!select) return;
+            select.innerHTML = '<option value="">-- Selecciona Categoría --</option>';
+            categoriasGlobales.forEach(cat => {
+                select.innerHTML += `<option value="${cat}">${cat}</option>`;
+            });
+        }
+
+        function abrirModalCategorias() {
+            renderizarListaModalCategorias();
+            document.getElementById('modalCategorias').classList.remove('hidden');
+        }
+
+        function cerrarModalCategorias() {
+            document.getElementById('modalCategorias').classList.add('hidden');
+            document.getElementById('nuevaCategoriaInput').value = '';
+            renderizarSelectCategorias();
+        }
+
+        function renderizarListaModalCategorias() {
+            const contenedor = document.getElementById('listaCategoriasModal');
+            contenedor.innerHTML = '';
+            if (categoriasGlobales.length === 0) {
+                contenedor.innerHTML = '<div class="p-3 text-xs text-gray-400 text-center">No hay categorías.</div>';
+                return;
+            }
+            categoriasGlobales.forEach((cat, index) => {
+                contenedor.innerHTML += `
+                    <div class="flex justify-between items-center p-2 text-xs text-gray-700 font-medium">
+                        <span>🏷️ ${cat}</span>
+                        <button type="button" onclick="eliminarCategoria(${index})" class="bg-red-50 text-red-600 hover:bg-red-100 px-2 py-1 rounded font-bold transition">🗑️ Eliminar</button>
+                    </div>
+                `;
+            });
+        }
+
+        function agregarCategoria() {
+            const input = document.getElementById('nuevaCategoriaInput');
+            const nuevaCat = input.value.trim();
+            if (!nuevaCat) {
+                alert('⚠️ Escribe el nombre de la categoría.');
+                return;
+            }
+            if (categoriasGlobales.includes(nuevaCat)) {
+                alert('⚠️ Esta categoría ya existe.');
+                return;
+            }
+            categoriasGlobales.push(nuevaCat);
+            localStorage.setItem('csv_categorias_profesionales', JSON.stringify(categoriasGlobales));
+            input.value = '';
+            renderizarListaModalCategorias();
+            renderizarSelectCategorias();
+        }
+
+        function eliminarCategoria(index) {
+            if (confirm(`¿Seguro que deseas eliminar la categoría "${categoriasGlobales[index]}"?`)) {
+                categoriasGlobales.splice(index, 1);
+                localStorage.setItem('csv_categorias_profesionales', JSON.stringify(categoriasGlobales));
+                renderizarListaModalCategorias();
+                renderizarSelectCategorias();
+            }
+        }
 
         async function cargarObrasGlobalesAdmin() {
             try {
