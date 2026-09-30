@@ -116,9 +116,9 @@
                 <section id="seccion-dashboard" class="vista-panel space-y-6">
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                         <h2 class="text-lg font-bold text-red-700 flex items-center gap-2 mb-3">
-                            ⚠ Alertas: Partes Pendientes de Hoy
+                            ⚠ Alertas: Partes Pendientes
                         </h2>
-                        <p class="text-xs text-gray-500 mb-4">Operarios sin parte registrado en la fecha actual. Selecciona una acción para asignar partes o ausencias:</p>
+                        <p class="text-xs text-gray-500 mb-4">Operarios con días pendientes sin parte registrado. Selecciona una acción o estado para cada fecha:</p>
                         <div id="listaAlertas" class="space-y-3">
                             <div class="p-4 rounded bg-gray-50 text-gray-500 text-sm">Cargando estado del personal...</div>
                         </div>
@@ -319,7 +319,7 @@
                                     </select>
                                 </div>
                                 <button type="submit" class="w-full bg-[#ffcc00] text-[#004b87] font-bold text-xs py-2.5 rounded-lg shadow hover:bg-yellow-400 transition">
-                                    🏗️ Asignar Obra a Jefe
+                                    🏗️️ Asignar Obra a Jefe
                                 </button>
                             </form>
                             <div class="pt-4 border-t">
@@ -469,6 +469,27 @@
             <div class="bg-gray-50 px-6 py-4 border-t flex justify-end gap-3">
                 <button onclick="cerrarModalEditarUsuario()" class="px-4 py-2 bg-gray-200 text-gray-700 font-bold text-xs rounded-xl hover:bg-gray-300 transition">Cancelar</button>
                 <button onclick="guardarEdicionUsuarioModal()" class="px-5 py-2 bg-[#ffcc00] text-[#004b87] font-extrabold text-xs rounded-xl shadow hover:bg-yellow-400 transition">💾 Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Editar Obra -->
+    <div id="modalEditarObra" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-[#004b87] text-white p-4 flex justify-between items-center">
+                <h3 class="font-bold text-base">✏️ Modificar Nombre de Obra</h3>
+                <button onclick="cerrarModalEditarObra()" class="text-white font-bold text-lg px-2 hover:bg-blue-900 rounded">✕</button>
+            </div>
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                <input type="hidden" id="editObraId" />
+                <div>
+                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Nombre de la Obra</label>
+                    <input type="text" id="editObraNombre" class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 font-bold" />
+                </div>
+            </div>
+            <div class="bg-gray-50 px-6 py-4 border-t flex justify-end gap-3">
+                <button onclick="cerrarModalEditarObra()" class="px-4 py-2 bg-gray-200 text-gray-700 font-bold text-xs rounded-xl hover:bg-gray-300 transition">Cancelar</button>
+                <button onclick="guardarEdicionObraModal()" class="px-5 py-2 bg-[#ffcc00] text-[#004b87] font-extrabold text-xs rounded-xl shadow hover:bg-yellow-400 transition">💾 Guardar Cambios</button>
             </div>
         </div>
     </div>
@@ -718,32 +739,56 @@
                 const data = await res.json();
                 const contenedor = document.getElementById('listaAlertas');
                 contenedor.innerHTML = '';
-                if(data.success) {
-                    if(data.alertas.length === 0) {
-                        contenedor.innerHTML = '<div class="bg-green-50 border-l-4 border-green-600 p-4 rounded text-green-900 text-sm font-semibold">✅ ¡Excelente! Todos los operarios han entregado su parte de hoy.</div>';
+                
+                if (data.success) {
+                    if (data.alertas.length === 0) {
+                        contenedor.innerHTML = '<div class="bg-green-50 border-l-4 border-green-600 p-4 rounded text-green-900 text-sm font-semibold">✅ ¡Excelente! Todos los operarios están al día con sus partes.</div>';
                         return;
                     }
+
                     data.alertas.forEach(op => {
-                        const fechaRaw = new Date().toISOString().split('T')[0];
                         const div = document.createElement('div');
-                        div.className = 'bg-white border-l-4 border-red-600 p-4 rounded text-red-900 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-sm';
+                        div.className = 'bg-white border-l-4 border-red-600 p-4 rounded-xl shadow-sm space-y-3 text-sm';
+                        
+                        let htmlFechas = '';
+                        (op.fechas_pendientes || []).forEach(fecha => {
+                            const [anio, mes, dia] = fecha.split('-');
+                            const fechaFormateada = `${dia}/${mes}/${anio}`;
+
+                            htmlFechas += `
+                                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 p-3 bg-red-50/50 rounded-lg border border-red-100">
+                                    <div class="font-bold text-red-900 text-xs flex items-center gap-1.5">
+                                        <span>📅 Fecha pendiente:</span> <span class="underline">${fechaFormateada}</span>
+                                    </div>
+                                    <div class="w-full sm:w-auto">
+                                        <select onchange="abrirModalAccionOperario(${op.id_usuario}, '${fecha}', '${op.nombre.replace(/'/g, "\\'")}', this)" class="w-full sm:w-auto border border-gray-300 p-2 rounded-lg text-xs bg-white text-[#004b87] font-bold outline-none cursor-pointer shadow-sm">
+                                            <option value="" disabled selected>⚡ Asignar estado / parte...</option>
+                                            <option value="hacer_parte">1. 📝 Hacer parte</option>
+                                            <option value="vacaciones">🏖️ Vacaciones (8h - Rosa)</option>
+                                            <option value="permiso">⏱️️ Horas de Permiso (Azul)</option>
+                                            <option value="baja">🏥 Baja Médica (8h - Verde)</option>
+                                            <option value="paternidad">👶 Paternidad (P)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            `;
+                        });
+
                         div.innerHTML = `
-                            <div><strong>${op.nombre}</strong> (Cód: ${op.codigo_operario}) no ha introducido el parte de hoy.</div>
-                            <div class="flex items-center gap-2 w-full sm:w-auto">
-                                <select onchange="abrirModalAccionOperario(${op.id_usuario}, '${fechaRaw}', '${op.nombre}', this)" class="border border-gray-300 p-2 rounded text-xs bg-yellow-50 text-[#004b87] font-bold outline-none cursor-pointer">
-                                    <option value="" disabled selected>⚡ Asignar estado / parte...</option>
-                                    <option value="hacer_parte">1. 📝 Hacer parte</option>
-                                    <option value="vacaciones">🏖️ Vacaciones (8h - Rosa)</option>
-                                    <option value="permiso">⏱️ Horas de Permiso (Azul)</option>
-                                    <option value="baja">🏥 Baja Médica (8h - Verde)</option>
-                                    <option value="paternidad">👶 Paternidad (P)</option>
-                                </select>
+                            <div class="flex justify-between items-center border-b pb-2">
+                                <span class="font-extrabold text-[#004b87] text-base">👤 ${op.nombre}</span>
+                                <span class="text-xs font-bold bg-red-100 text-red-800 px-2.5 py-1 rounded-full">Cód: ${op.codigo_operario || 'N/A'}</span>
+                            </div>
+                            <div class="space-y-2">
+                                ${htmlFechas}
                             </div>
                         `;
                         contenedor.appendChild(div);
                     });
                 }
-            } catch(e) { console.error(e); }
+            } catch (e) { 
+                console.error("Error al cargar alertas:", e); 
+            }
         }
 
         function abrirModalAccionOperario(idUsuario, fecha, nombreOperario, selectElement) {
@@ -1040,9 +1085,12 @@
                                     <span class="font-bold text-[#004b87]">🏗️ ${o.nombre}</span>
                                     <span class="text-xs px-2 py-0.5 rounded font-bold ${estadoClase}">${textoEstado}</span>
                                 </div>
-                                <button onclick="toggleEstadoObra(${o.id_obra}, ${!o.activo})" class="text-xs font-bold px-3 py-1 rounded transition ${botonClase}">
-                                    ${botonTexto}
-                                </button>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="editarObra(${o.id_obra}, '${o.nombre.replace(/'/g, "\\'")}')" class="text-xs font-bold px-3 py-1 bg-blue-50 text-[#004b87] hover:bg-blue-100 rounded transition">✏️ Editar</button>
+                                    <button onclick="toggleEstadoObra(${o.id_obra}, ${!o.activo})" class="text-xs font-bold px-3 py-1 rounded transition ${botonClase}">
+                                        ${botonTexto}
+                                    </button>
+                                </div>
                             </div>`;
                     });
                 }
@@ -1054,8 +1102,48 @@
             try {
                 const res = await fetch('/api/admin/obras', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre }) });
                 const data = await res.json();
-                if(data.success) { alert('✅ ¡Obra creada con éxito!'); document.getElementById('nombreNuevaObra').value = ''; cargarObrasAdmin(); }
+                if(data.success) { alert('✅ ¡Obra creada con éxito!'); document.getElementById('nombreNuevaObra').value = ''; cargarObrasAdmin(); await cargarObrasGlobalesAdmin(); }
             } catch(err) { console.error(err); }
+        }
+
+        function editarObra(idObra, nombreActual) {
+            document.getElementById('editObraId').value = idObra;
+            document.getElementById('editObraNombre').value = nombreActual;
+            document.getElementById('modalEditarObra').classList.remove('hidden');
+        }
+
+        function cerrarModalEditarObra() {
+            document.getElementById('modalEditarObra').classList.add('hidden');
+        }
+
+        async function guardarEdicionObraModal() {
+            const idObra = document.getElementById('editObraId').value;
+            const nuevoNombre = document.getElementById('editObraNombre').value.trim();
+
+            if (!nuevoNombre) {
+                alert('⚠️ El nombre de la obra no puede estar vacío.');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/admin/obras/${idObra}`, { 
+                    method: 'PUT', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ nombre: nuevoNombre }) 
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('✅ ¡Obra modificada correctamente!');
+                    cerrarModalEditarObra();
+                    cargarObrasAdmin();
+                    await cargarObrasGlobalesAdmin();
+                } else {
+                    alert('❌ Error al modificar la obra: ' + (data.error || ''));
+                }
+            } catch (err) {
+                console.error('Error de conexión:', err);
+                alert('❌ No se pudo conectar con el servidor.');
+            }
         }
 
         async function toggleEstadoObra(idObra, nuevoEstado) {
@@ -1460,7 +1548,7 @@
             const inicio = document.getElementById(`inicio_${idJefe}`).value;
             const fin = document.getElementById(`fin_${idJefe}`).value;
 
-            if (!inicio || !fin) { alert('⚠️️ Selecciona un rango de fechas válido.'); return; }
+            if (!inicio || !fin) { alert('⚠️ Selecciona un rango de fechas válido.'); return; }
 
             window.location.href = `/api/admin/exportar-dedicacion-jefe/${idJefe}?inicio=${inicio}&fin=${fin}`;
         }
