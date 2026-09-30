@@ -473,6 +473,31 @@
         </div>
     </div>
 
+    <!-- Modal para Restablecer Contraseña -->
+    <div id="modalPassword" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-[#004b87] text-white p-4 flex justify-between items-center">
+                <h3 class="font-bold text-base">🔑 Restablecer Contraseña</h3>
+                <button onclick="cerrarModalPassword()" class="text-white font-bold text-lg px-2 hover:bg-blue-900 rounded">✕</button>
+            </div>
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                <input type="hidden" id="passUserId" />
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Trabajador</label>
+                    <p id="passNombreOperario" class="text-sm font-extrabold text-[#004b87] bg-yellow-50 p-2.5 rounded-xl border border-yellow-200"></p>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Nueva Contraseña Temporal</label>
+                    <input type="text" id="passNuevaInput" value="123456" class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 font-bold" />
+                </div>
+            </div>
+            <div class="bg-gray-50 px-6 py-4 border-t flex justify-end gap-3">
+                <button onclick="cerrarModalPassword()" class="px-4 py-2 bg-gray-200 text-gray-700 font-bold text-xs rounded-xl hover:bg-gray-300 transition">Cancelar</button>
+                <button onclick="guardarNuevaPasswordModal()" class="px-5 py-2 bg-[#ffcc00] text-[#004b87] font-extrabold text-xs rounded-xl shadow hover:bg-yellow-400 transition">💾 Actualizar Contraseña</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal para Gestionar Categorías Profesionales -->
     <div id="modalCategorias" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -1075,7 +1100,7 @@
                         </div>
                         <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
                             <button onclick="editarUsuario(${u.id_usuario}, '${u.nombre}', '${u.email}', '${u.rol}', '${u.categoria || ''}', '${u.codigo_operario || ''}')" class="text-xs font-bold px-3 py-1 bg-blue-50 text-[#004b87] hover:bg-blue-100 rounded transition">✏️ Editar</button>
-                            <button onclick="restablecerPassword(${u.id_usuario}, '${u.nombre}')" class="text-xs font-bold px-3 py-1 bg-yellow-50 text-amber-700 hover:bg-yellow-100 rounded transition">🔑 Contraseña</button>
+                            <button onclick="restablecerPassword(${u.id_usuario}, '${u.nombre.replace(/'/g, "\\'")}')" class="text-xs font-bold px-3 py-1 bg-yellow-50 text-amber-700 hover:bg-yellow-100 rounded transition">🔑 Contraseña</button>
                             <button onclick="toggleEstadoUsuario(${u.id_usuario}, ${!u.activo})" class="text-xs font-bold px-3 py-1 rounded transition ${botonEstadoClase}">${botonEstadoTexto}</button>
                         </div>
                     </div>`;
@@ -1148,12 +1173,43 @@
             }
         }
 
-        async function restablecerPassword(idUsuario, nombreOperario) {
-            const nuevaPass = prompt(`Introduce la nueva contraseña temporal para ${nombreOperario}:`, "123456"); if (nuevaPass === null) return;
+        function restablecerPassword(idUsuario, nombreOperario) {
+            document.getElementById('passUserId').value = idUsuario;
+            document.getElementById('passNombreOperario').textContent = nombreOperario;
+            document.getElementById('passNuevaInput').value = '123456';
+            document.getElementById('modalPassword').classList.remove('hidden');
+        }
+
+        function cerrarModalPassword() {
+            document.getElementById('modalPassword').classList.add('hidden');
+        }
+
+        async function guardarNuevaPasswordModal() {
+            const idUsuario = document.getElementById('passUserId').value;
+            const nuevaPass = document.getElementById('passNuevaInput').value.trim();
+
+            if (!nuevaPass) {
+                alert('⚠️ Introduce una contraseña válida.');
+                return;
+            }
+
             try {
-                const res = await fetch(`/api/admin/usuarios/${idUsuario}/password`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: nuevaPass }) });
-                if ((await res.json()).success) { alert('✅ ¡Contraseña restablecida con éxito!'); } else { alert('❌ Error al restablecer la contraseña.'); }
-            } catch (err) { console.error('Error de conexión:', err); alert('❌ No se pudo conectar con el servidor.'); }
+                const res = await fetch(`/api/admin/usuarios/${idUsuario}/password`, { 
+                    method: 'PUT', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ password: nuevaPass }) 
+                });
+                const data = await res.json();
+                if (data.success) { 
+                    alert('✅ ¡Contraseña restablecida con éxito!'); 
+                    cerrarModalPassword();
+                } else { 
+                    alert('❌ Error al restablecer la contraseña.'); 
+                }
+            } catch (err) { 
+                console.error('Error de conexión:', err); 
+                alert('❌ No se pudo conectar con el servidor.'); 
+            }
         }
 
         async function toggleEstadoUsuario(idUsuario, nuevoEstado) {
@@ -1404,7 +1460,7 @@
             const inicio = document.getElementById(`inicio_${idJefe}`).value;
             const fin = document.getElementById(`fin_${idJefe}`).value;
 
-            if (!inicio || !fin) { alert('⚠️ Selecciona un rango de fechas válido.'); return; }
+            if (!inicio || !fin) { alert('⚠️️ Selecciona un rango de fechas válido.'); return; }
 
             window.location.href = `/api/admin/exportar-dedicacion-jefe/${idJefe}?inicio=${inicio}&fin=${fin}`;
         }
