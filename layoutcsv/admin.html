@@ -288,22 +288,22 @@
                 <section id="seccion-asignaciones" class="vista-panel hidden space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
-                            <h2 class="text-lg font-bold text-[#004b87]">Asignar Operario a Encargado</h2>
+                            <h2 class="text-lg font-bold text-[#004b87]">Asignar Trabajador a Encargado</h2>
                             <form onsubmit="asignarOperarioEncargado(event)" class="space-y-3">
                                 <div>
-                                    <label class="block text-xs font-bold text-gray-600 mb-1">Seleccionar Encargado</label>
+                                    <label class="block text-xs font-bold text-gray-600 mb-1">Seleccionar Encargado Principal</label>
                                     <select id="selectEncargado" class="w-full border border-gray-300 p-2 rounded-lg text-sm bg-white outline-none" required>
                                         <option value="">Cargando encargados...</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-bold text-gray-600 mb-1">Seleccionar Operario</label>
+                                    <label class="block text-xs font-bold text-gray-600 mb-1">Seleccionar Trabajador (Operario o Encargado)</label>
                                     <select id="selectOperarioAsignar" class="w-full border border-gray-300 p-2 rounded-lg text-sm bg-white outline-none" required>
-                                        <option value="">Cargando operarios...</option>
+                                        <option value="">Cargando trabajadores...</option>
                                     </select>
                                 </div>
                                 <button type="submit" class="w-full bg-[#ffcc00] text-[#004b87] font-bold text-xs py-2.5 rounded-lg shadow hover:bg-yellow-400 transition">
-                                    🔗 Asignar Operario a Cuadrilla
+                                    🔗 Asignar a Cuadrilla
                                 </button>
                             </form>
                             <div class="pt-4 border-t">
@@ -1279,7 +1279,7 @@
                             <span class="text-xs px-2 py-0.5 rounded font-bold ${estadoClase}">${textoEstado}</span>
                         </div>
                         <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-                            <button onclick="editarUsuario(${u.id_usuario}, '${u.nombre}', '${u.email}', '${u.rol}', '${u.categoria || ''}', '${u.codigo_operario || ''}')" class="text-xs font-bold px-3 py-1 bg-blue-50 text-[#004b87] hover:bg-blue-100 rounded transition">✏️️ Editar</button>
+                            <button onclick="editarUsuario(${u.id_usuario}, '${u.nombre}', '${u.email}', '${u.rol}', '${u.categoria || ''}', '${u.codigo_operario || ''}')" class="text-xs font-bold px-3 py-1 bg-blue-50 text-[#004b87] hover:bg-blue-100 rounded transition">✏ Editar</button>
                             <button onclick="restablecerPassword(${u.id_usuario}, '${u.nombre.replace(/'/g, "\\'")}')" class="text-xs font-bold px-3 py-1 bg-yellow-50 text-amber-700 hover:bg-yellow-100 rounded transition">🔑 Contraseña</button>
                             <button onclick="toggleEstadoUsuario(${u.id_usuario}, ${!u.activo})" class="text-xs font-bold px-3 py-1 rounded transition ${botonEstadoClase}">${botonEstadoTexto}</button>
                         </div>
@@ -1405,13 +1405,13 @@
                     const selOperario = document.getElementById('selectOperarioAsignar');
                     const selJefe = document.getElementById('selectJefeObra');
 
-                    selEncargado.innerHTML = '<option value="">-- Selecciona Encargado --</option>';
-                    selOperario.innerHTML = '<option value="">-- Selecciona Operario --</option>';
+                    selEncargado.innerHTML = '<option value="">-- Selecciona Encargado Principal --</option>';
+                    selOperario.innerHTML = '<option value="">-- Selecciona Trabajador (Operario o Encargado) --</option>';
                     selJefe.innerHTML = '<option value="">-- Selecciona Jefe de Obra --</option>';
 
                     dataUsers.usuarios.forEach(u => {
                         if (u.rol === 'encargado') selEncargado.innerHTML += `<option value="${u.id_usuario}">${u.nombre}</option>`;
-                        if (u.rol === 'operario') selOperario.innerHTML += `<option value="${u.id_usuario}">${u.nombre} (${u.codigo_operario || 'Sin Cód'})</option>`;
+                        if (u.rol === 'operario' || u.rol === 'encargado') selOperario.innerHTML += `<option value="${u.id_usuario}">${u.nombre} (${u.codigo_operario || 'Sin Cód'}) - ${u.rol.toUpperCase()}</option>`;
                         if (u.rol === 'JEFE_DE_OBRA' || u.rol === 'jefe_de_obra' || u.rol === 'jefedeobra') selJefe.innerHTML += `<option value="${u.id_usuario}">${u.nombre}</option>`;
                     });
                 }
@@ -1455,7 +1455,7 @@
             try {
                 const res = await fetch('/api/admin/asignaciones-plantilla', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_encargado, id_operario }) });
                 const data = await res.json();
-                if (data.success) { alert('✅ ¡Operario asignado al encargado con éxito!'); cargarListasAsignacionesGuardadas(); } else { alert('❌ Error: ' + (data.error || 'No se pudo asignar')); }
+                if (data.success) { alert('✅ ¡Trabajador asignado al encargado con éxito!'); cargarListasAsignacionesGuardadas(); } else { alert('❌ Error: ' + (data.error || 'No se pudo asignar')); }
             } catch (err) { console.error(err); }
         }
 
