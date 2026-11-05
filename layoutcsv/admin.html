@@ -115,9 +115,14 @@
                 <!-- 1. VISTA: DASHBOARD -->
                 <section id="seccion-dashboard" class="vista-panel space-y-6">
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                        <h2 class="text-lg font-bold text-red-700 flex items-center gap-2 mb-3">
-                            ⚠ Alertas: Partes Pendientes
-                        </h2>
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                            <h2 class="text-lg font-bold text-red-700 flex items-center gap-2">
+                                ⚠ Alertas: Partes Pendientes
+                            </h2>
+                            <button onclick="descartarTodosLosPendientes()" id="btnDescartarTodos" class="hidden bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs px-4 py-2 rounded-lg transition shadow-sm items-center gap-2">
+                                <span>🗑️</span> Descartar TODOS los pendientes
+                            </button>
+                        </div>
                         <p class="text-xs text-gray-500 mb-4">Operarios con días pendientes sin parte registrado. Selecciona una acción o estado para cada fecha:</p>
                         <div id="listaAlertas" class="space-y-3">
                             <div class="p-4 rounded bg-gray-50 text-gray-500 text-sm">Cargando estado del personal...</div>
@@ -616,6 +621,7 @@
         let todosLosUsuariosGlobal = [];
         let listaObrasGlobalAdmin = [];
         let categoriasGlobales = ['Encargado', 'OF 1ª', 'OF 1ª Camionero', 'OF 1ª Encof', 'OF 1ª Pintor', 'OF 2ª', 'Peón'];
+        let alertasGlobalAdmin = []; // Variable para almacenar las alertas y poder descartar todas
 
         // Variables de Paginación para Partes
         let paginaActualOffset = 0;
@@ -766,7 +772,15 @@
                 contenedor.innerHTML = '';
                 
                 if (data.success) {
-                    if (data.alertas.length === 0) {
+                    alertasGlobalAdmin = data.alertas || [];
+                    
+                    const btnDescartar = document.getElementById('btnDescartarTodos');
+                    if (alertasGlobalAdmin.length > 0) {
+                        btnDescartar.classList.remove('hidden');
+                        btnDescartar.classList.add('flex');
+                    } else {
+                        btnDescartar.classList.add('hidden');
+                        btnDescartar.classList.remove('flex');
                         contenedor.innerHTML = '<div class="bg-green-50 border-l-4 border-green-600 p-4 rounded text-green-900 text-sm font-semibold">✅ ¡Excelente! Todos los operarios están al día con sus partes.</div>';
                         return;
                     }
@@ -814,6 +828,69 @@
                 }
             } catch (e) { 
                 console.error("Error al cargar alertas:", e); 
+            }
+        }
+
+        async function descartarTodosLosPendientes() {
+            if (alertasGlobalAdmin.length === 0) {
+                alert('No hay partes pendientes para descartar.');
+                return;
+            }
+
+            let totalPendientes = 0;
+            alertasGlobalAdmin.forEach(op => {
+                totalPendientes += (op.fechas_pendientes || []).length;
+            });
+
+            if (totalPendientes === 0) return;
+
+            const mensaje = `⚠️ ATENCIÓN ⚠️\n\n¿Estás seguro de que deseas descartar MASIVAMENTE los ${totalPendientes} partes pendientes de todos los trabajadores?\n\nSe registrarán automáticamente con 0 horas. Esta acción afectará a las estadísticas y no se puede deshacer de golpe.`;
+            
+            if (!confirm(mensaje)) {
+                return;
+            }
+
+            const btn = document.getElementById('btnDescartarTodos');
+            if(btn) { 
+                btn.disabled = true; 
+                btn.innerHTML = '<span>⏳</span> Procesando...'; 
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+
+            try {
+                const promesas = [];
+                for (const op of alertasGlobalAdmin) {
+                    for (const fecha of (op.fechas_pendientes || [])) {
+                        promesas.push(
+                            fetch('/api/admin/estado-especial', { 
+                                method: 'POST', 
+                                headers: { 'Content-Type': 'application/json' }, 
+                                body: JSON.stringify({ 
+                                    id_usuario: op.id_usuario, 
+                                    fecha: fecha, 
+                                    tipo: 'trabajo', 
+                                    horas: 0, 
+                                    tareas: 'Día descartado / Incompleto', 
+                                    id_obra: 1 
+                                }) 
+                            }).then(r => r.json())
+                        );
+                    }
+                }
+
+                await Promise.all(promesas);
+                alert(`✅ Se han descartado ${totalPendientes} partes pendientes con éxito.`);
+                await cargarAlertas(); 
+                await buscarPartesFiltrados(true); 
+            } catch(e) {
+                console.error(e);
+                alert('❌ Ocurrió un error al intentar descartar todos los partes masivamente.');
+            } finally {
+                if(btn) { 
+                    btn.disabled = false; 
+                    btn.innerHTML = '<span>🗑️</span> Descartar TODOS los pendientes'; 
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
             }
         }
 
