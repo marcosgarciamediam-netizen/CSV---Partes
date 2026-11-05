@@ -37,57 +37,104 @@
                 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     
-                    <!-- Columna Izquierda: Registrar parte para varios operarios de la plantilla -->
-                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 lg:col-span-1 space-y-4">
-                        <div class="flex justify-between items-center">
-                            <h2 class="text-lg font-bold text-[#004b87]">Registrar Parte de Cuadrilla</h2>
-                            <button type="button" onclick="seleccionarTodosOperarios(true)" class="text-xs font-bold text-blue-600 hover:underline">Seleccionar todos</button>
-                        </div>
-                        <p class="text-xs text-gray-600">Marca los trabajadores a los que deseas aplicar este parte de forma masiva:</p>
+                    <!-- Columna Izquierda: Formularios de Registro (Propio y Cuadrilla) -->
+                    <div class="lg:col-span-1 space-y-6 flex flex-col">
                         
-                        <form id="formParteEncargado" onsubmit="enviarParteEncargado(event)" class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Trabajadores de la Plantilla</label>
-                                <div id="contenedorCheckboxesOperarios" class="border p-3 rounded-xl max-h-48 overflow-y-auto space-y-2 bg-gray-50">
-                                    <div class="text-xs text-gray-400">Cargando plantilla...</div>
-                                </div>
+                        <!-- 1. Formulario: Mi Propio Parte -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl">🙋‍♂️</span>
+                                <h2 class="text-lg font-bold text-[#004b87]">Mi Propio Parte</h2>
                             </div>
-
-                            <div>
-                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Buscar Obra (Escribe para filtrar)</label>
-                                <input type="text" id="buscadorObraRegistroInput" oninput="filtrarObrasRegistro(this.value)" placeholder="Escribe el nombre de la obra..." class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 mb-2 font-semibold outline-none" autocomplete="off" />
-                                <div id="listaObrasRegistroResultados" class="border rounded-xl max-h-40 overflow-y-auto bg-white divide-y divide-gray-100 shadow-inner"></div>
-                                <input type="hidden" id="selectObraRegistro" required />
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-3">
+                            <p class="text-xs text-gray-600">Registra tus horas y tareas individuales de hoy.</p>
+                            
+                            <form id="formMiParte" onsubmit="enviarMiParteEncargado(event)" class="space-y-4 border-t pt-4">
                                 <div>
-                                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Fecha</label>
-                                    <input type="date" id="inputFecha" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 outline-none" />
+                                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Buscar Obra</label>
+                                    <input type="text" id="buscadorObraPropioInput" oninput="filtrarObrasPropio(this.value)" placeholder="Escribe el nombre de la obra..." class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 mb-2 font-semibold outline-none" autocomplete="off" />
+                                    <div id="listaObrasPropioResultados" class="border rounded-xl max-h-40 overflow-y-auto bg-white divide-y divide-gray-100 shadow-inner"></div>
+                                    <input type="hidden" id="selectObraPropio" required />
                                 </div>
+
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Fecha</label>
+                                        <input type="date" id="inputFechaPropio" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Horas</label>
+                                        <input type="number" id="inputHorasPropio" step="0.5" min="0.5" max="24" value="8" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 outline-none font-bold" />
+                                    </div>
+                                </div>
+
                                 <div>
-                                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Horas</label>
-                                    <input type="number" id="inputHoras" step="0.5" min="0.5" max="24" value="8" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 outline-none font-bold" />
+                                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Tareas / Detalles</label>
+                                    <textarea id="inputTareasPropio" rows="2" required placeholder="Tus labores realizadas..." class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 outline-none"></textarea>
                                 </div>
+
+                                <div id="mensajeFeedbackPropio" class="hidden p-2 text-xs font-semibold rounded text-center"></div>
+
+                                <button type="submit" id="btnEnviarPropio" class="w-full bg-[#004b87] text-white font-extrabold text-sm py-3 rounded-xl shadow-md hover:bg-blue-900 transition">
+                                    ✅ Registrar Mi Parte
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- 2. Formulario: Parte Masivo Cuadrilla -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xl">👥</span>
+                                    <h2 class="text-lg font-bold text-[#004b87]">Parte de Cuadrilla</h2>
+                                </div>
+                                <button type="button" onclick="seleccionarTodosOperarios(true)" class="text-xs font-bold text-blue-600 hover:underline">Seleccionar todos</button>
                             </div>
+                            <p class="text-xs text-gray-600">Aplica un mismo parte a varios operarios a la vez.</p>
+                            
+                            <form id="formParteEncargado" onsubmit="enviarParteEncargado(event)" class="space-y-4 border-t pt-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Operarios Asignados</label>
+                                    <div id="contenedorCheckboxesOperarios" class="border p-3 rounded-xl max-h-48 overflow-y-auto space-y-2 bg-gray-50">
+                                        <div class="text-xs text-gray-400">Cargando plantilla...</div>
+                                    </div>
+                                </div>
 
-                            <div>
-                                <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Tareas / Detalles</label>
-                                <textarea id="inputTareas" rows="2" required placeholder="Descripción de las labores..." class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 outline-none"></textarea>
-                            </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Buscar Obra</label>
+                                    <input type="text" id="buscadorObraRegistroInput" oninput="filtrarObrasRegistro(this.value)" placeholder="Escribe el nombre de la obra..." class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 mb-2 font-semibold outline-none" autocomplete="off" />
+                                    <div id="listaObrasRegistroResultados" class="border rounded-xl max-h-40 overflow-y-auto bg-white divide-y divide-gray-100 shadow-inner"></div>
+                                    <input type="hidden" id="selectObraRegistro" required />
+                                </div>
 
-                            <div id="mensajeFeedback" class="hidden p-2 text-xs font-semibold rounded text-center"></div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Fecha</label>
+                                        <input type="date" id="inputFecha" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Horas</label>
+                                        <input type="number" id="inputHoras" step="0.5" min="0.5" max="24" value="8" required class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 outline-none font-bold" />
+                                    </div>
+                                </div>
 
-                            <button type="submit" id="btnEnviar" class="w-full bg-[#ffcc00] text-[#004b87] font-extrabold text-sm py-3 rounded-xl shadow-md hover:bg-yellow-400 transition">
-                                🚀 Registrar Parte Masivo
-                            </button>
-                        </form>
+                                <div>
+                                    <label class="block text-xs font-bold text-[#004b87] uppercase mb-1">Tareas / Detalles</label>
+                                    <textarea id="inputTareas" rows="2" required placeholder="Descripción de las labores..." class="w-full border p-2.5 rounded-xl text-sm bg-gray-50 outline-none"></textarea>
+                                </div>
+
+                                <div id="mensajeFeedback" class="hidden p-2 text-xs font-semibold rounded text-center"></div>
+
+                                <button type="submit" id="btnEnviar" class="w-full bg-[#ffcc00] text-[#004b87] font-extrabold text-sm py-3 rounded-xl shadow-md hover:bg-yellow-400 transition">
+                                    🚀 Registrar Parte Masivo
+                                </button>
+                            </form>
+                        </div>
                     </div>
 
                     <!-- Columna Derecha: Historial y supervisión de partes recientes de la cuadrilla con paginación -->
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 lg:col-span-2 flex flex-col">
                         <h2 class="text-lg font-bold text-[#004b87] mb-2">Últimos Partes de la Cuadrilla</h2>
-                        <p class="text-xs text-gray-600 mb-4">Supervisión en tiempo real de la actividad registrada por tus operarios.</p>
+                        <p class="text-xs text-gray-600 mb-4">Supervisión en tiempo real de la actividad registrada por tus operarios (incluyéndote a ti).</p>
                         
                         <div id="listaPartesCuadrilla" class="space-y-3 overflow-y-auto flex-1 max-h-[450px] pr-1">
                             <div class="p-4 text-center text-sm text-gray-400">Cargando partes...</div>
@@ -153,7 +200,9 @@
             const idEncargado = localStorage.getItem('usuario_id');
             if (nombreUser) document.getElementById('nombreUsuarioHeader').textContent = nombreUser;
             
-            document.getElementById('inputFecha').value = new Date().toISOString().split('T')[0];
+            const fechaHoy = new Date().toISOString().split('T')[0];
+            document.getElementById('inputFecha').value = fechaHoy;
+            document.getElementById('inputFechaPropio').value = fechaHoy;
 
             await cargarPlantillaYObra(idEncargado);
             await cargarPartesCuadrilla(idEncargado);
@@ -166,27 +215,17 @@
                 const contenedorOps = document.getElementById('contenedorCheckboxesOperarios');
                 contenedorOps.innerHTML = '';
                 
-                // 1. Insertar siempre al encargado primero (con un diseño destacado en amarillo)
-                const nombreEncargado = localStorage.getItem('usuario_nombre') || 'Mi usuario';
-                contenedorOps.innerHTML += `
-                    <label class="flex items-center gap-2 text-xs text-[#004b87] cursor-pointer font-extrabold mb-2 pb-2 border-b border-gray-200 bg-yellow-50 p-2 rounded-lg">
-                        <input type="checkbox" name="operariosSeleccionados" value="${idEncargado}" class="rounded border-gray-300 w-4 h-4 text-[#004b87] focus:ring-[#004b87]" />
-                        <span>🙋‍♂️ ${nombreEncargado} (Mi propio parte)</span>
-                    </label>
-                `;
-
-                // 2. Rellenar el resto de la plantilla asignada
                 if (dataPlantilla.success && dataPlantilla.plantilla.length > 0) {
                     dataPlantilla.plantilla.forEach(op => {
                         contenedorOps.innerHTML += `
-                            <label class="flex items-center gap-2 text-xs text-gray-700 cursor-pointer font-medium px-2 py-1 hover:bg-gray-100 rounded transition">
+                            <label class="flex items-center gap-2 text-xs text-gray-700 cursor-pointer font-medium">
                                 <input type="checkbox" name="operariosSeleccionados" value="${op.id_usuario}" class="rounded border-gray-300 text-[#004b87] focus:ring-[#004b87]" />
                                 <span>${op.nombre} (${op.categoria || 'General'})</span>
                             </label>
                         `;
                     });
                 } else {
-                    contenedorOps.innerHTML += '<div class="text-xs text-gray-500 px-2 mt-2">No tienes más operarios asignados en tu plantilla.</div>';
+                    contenedorOps.innerHTML = '<div class="text-xs text-red-500">No tienes operarios asignados en tu plantilla.</div>';
                 }
 
                 const resObras = await fetch('/api/obras');
@@ -195,6 +234,7 @@
                 if (dataObras.success) {
                     listaObrasGlobal = dataObras.obras;
                     filtrarObrasRegistro('');
+                    filtrarObrasPropio('');
                 }
             } catch (error) {
                 console.error("Error al cargar datos del encargado:", error);
@@ -206,6 +246,9 @@
             checkboxes.forEach(cb => cb.checked = marcar);
         }
 
+        // ================= BUSCADORES DE OBRA =================
+
+        // 1. Buscador Obra: Parte Masivo
         function filtrarObrasRegistro(query) {
             const contenedor = document.getElementById('listaObrasRegistroResultados');
             contenedor.innerHTML = '';
@@ -227,92 +270,29 @@
             document.getElementById('listaObrasRegistroResultados').innerHTML = `<div class="p-2.5 text-xs font-bold text-green-700 bg-green-50">✅ Obra seleccionada: ${nombreObra}</div>`;
         }
 
-        async function cargarPartesCuadrilla(idEncargado) {
-            try {
-                const res = await fetch(`/api/encargado/${idEncargado}/partes`);
-                const data = await res.json();
-
-                if (data.success) {
-                    partesGlobal = data.partes;
-                    paginaActual = 1;
-                    renderizarTablaPartes();
-                }
-            } catch (error) {
-                console.error("Error cargando partes:", error);
-            }
-        }
-
-        function renderizarTablaPartes() {
-            const contenedor = document.getElementById('listaPartesCuadrilla');
-            const contenedorPaginacion = document.getElementById('paginacionContenedor');
+        // 2. Buscador Obra: Mi Parte
+        function filtrarObrasPropio(query) {
+            const contenedor = document.getElementById('listaObrasPropioResultados');
             contenedor.innerHTML = '';
-
-            if (partesGlobal.length === 0) {
-                contenedor.innerHTML = '<div class="p-6 bg-gray-50 text-center text-sm text-gray-500 border rounded-lg">No hay partes registrados recientes en tu cuadrilla.</div>';
-                contenedorPaginacion.classList.add('hidden');
+            const filtradas = listaObrasGlobal.filter(o => o.nombre.toLowerCase().includes(query.toLowerCase())).slice(0, 50);
+            
+            if (filtradas.length === 0) {
+                contenedor.innerHTML = '<div class="p-3 text-xs text-gray-400 text-center">No se encontraron obras.</div>';
                 return;
             }
 
-            contenedorPaginacion.classList.remove('hidden');
-
-            const totalPaginas = Math.ceil(partesGlobal.length / elementosPorPagina);
-            if (paginaActual > totalPaginas) paginaActual = totalPaginas;
-            if (paginaActual < 1) paginaActual = 1;
-
-            const inicio = (paginaActual - 1) * elementosPorPagina;
-            const fin = inicio + elementosPorPagina;
-            const partesPagina = partesGlobal.slice(inicio, fin);
-
-            partesPagina.forEach(p => {
-                const fechaFormateada = new Date(p.fecha).toLocaleDateString('es-ES');
-                const fechaLimpia = p.fecha ? p.fecha.split('T')[0] : new Date().toISOString().split('T')[0];
-                const nombreObraSeguro = (p.obra_nombre || '').replace(/'/g, "\\'");
-                const tareasSeguras = (p.tareas || '').replace(/'/g, "\\'");
-
-                contenedor.innerHTML += `
-                    <div class="border border-gray-200 rounded-lg p-4 bg-white hover:shadow-sm transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 relative">
-                        <div>
-                            <div class="font-bold text-gray-800 text-sm">${p.operario_nombre}</div>
-                            <div class="text-xs font-semibold text-[#004b87]">🏗️ ${p.obra_nombre} <span class="text-gray-400 font-normal">| 📅 ${fechaFormateada}</span></div>
-                            <div class="text-xs text-gray-600 mt-1 bg-gray-50 p-2 rounded">${p.tareas}</div>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="bg-blue-50 text-[#004b87] px-3 py-1.5 rounded-lg font-black text-sm shrink-0">
-                                ${p.horas}h
-                            </div>
-                            <button onclick="abrirModalEditar(${p.id_parte}, ${p.horas}, '${tareasSeguras}', ${p.id_obra}, '${nombreObraSeguro}', '${fechaLimpia}')" class="bg-yellow-50 hover:bg-yellow-100 text-[#004b87] p-2 rounded-lg text-xs font-bold transition" title="Editar parte">✏️</button>
-                            <button onclick="eliminarParte(${p.id_parte})" class="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg text-xs font-bold transition" title="Eliminar parte">🗑️</button>
-                        </div>
-                    </div>
-                `;
+            filtradas.forEach(o => {
+                contenedor.innerHTML += `<div onclick="seleccionarObraPropio(${o.id_obra}, '${o.nombre.replace(/'/g, "\\'")}')" class="p-2.5 text-xs text-gray-700 hover:bg-yellow-50 hover:text-[#004b87] cursor-pointer font-medium transition">🏢 ${o.nombre}</div>`;
             });
-
-            document.getElementById('textoPaginacion').textContent = `Página ${paginaActual} de ${totalPaginas || 1}`;
-            document.getElementById('btnAnterior').disabled = paginaActual === 1;
-            document.getElementById('btnSiguiente').disabled = paginaActual >= totalPaginas;
         }
 
-        function cambiarPagina(direccion) {
-            paginaActual += direccion;
-            renderizarTablaPartes();
+        function seleccionarObraPropio(idObra, nombreObra) {
+            document.getElementById('buscadorObraPropioInput').value = nombreObra;
+            document.getElementById('selectObraPropio').value = idObra;
+            document.getElementById('listaObrasPropioResultados').innerHTML = `<div class="p-2.5 text-xs font-bold text-green-700 bg-green-50">✅ Obra seleccionada: ${nombreObra}</div>`;
         }
 
-        function abrirModalEditar(idParte, horas, tareas, idObraActual, nombreObraActual, fechaActual) {
-            document.getElementById('modalIdParte').value = idParte;
-            document.getElementById('modalHoras').value = horas;
-            document.getElementById('modalTareas').value = tareas;
-            document.getElementById('buscadorObraInput').value = nombreObraActual;
-            document.getElementById('modalIdObraSeleccionada').value = idObraActual;
-            document.getElementById('modalFechaParte').value = fechaActual;
-
-            filtrarObrasModal('');
-            document.getElementById('modalEditarParte').classList.remove('hidden');
-        }
-
-        function cerrarModalEdicion() {
-            document.getElementById('modalEditarParte').classList.add('hidden');
-        }
-
+        // 3. Buscador Obra: Modal de Edición
         function filtrarObrasModal(query) {
             const contenedor = document.getElementById('listaObrasResultados');
             contenedor.innerHTML = '';
@@ -334,71 +314,61 @@
             document.getElementById('listaObrasResultados').innerHTML = `<div class="p-2.5 text-xs font-bold text-green-700 bg-green-50">✅ Obra seleccionada: ${nombreObra}</div>`;
         }
 
-        async function guardarEdicionParteModal() {
-            const idParte = document.getElementById('modalIdParte').value;
-            const horas = parseFloat(document.getElementById('modalHoras').value);
-            const tareas = document.getElementById('modalTareas').value;
-            let id_obra = document.getElementById('modalIdObraSeleccionada').value;
-            const fecha = document.getElementById('modalFechaParte').value;
+        // ================= ENVÍO Y EDICIÓN DE PARTES =================
 
+        async function enviarMiParteEncargado(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnEnviarPropio');
+            const feedback = document.getElementById('mensajeFeedbackPropio');
+            const idEncargado = localStorage.getItem('usuario_id');
+            
+            let id_obra = document.getElementById('selectObraPropio').value;
             if (!id_obra) {
-                const textoEscrito = document.getElementById('buscadorObraInput').value.trim();
+                const textoEscrito = document.getElementById('buscadorObraPropioInput').value.trim();
                 const obraEncontrada = listaObrasGlobal.find(o => o.nombre.toLowerCase().trim() === textoEscrito.toLowerCase());
                 if (obraEncontrada) { id_obra = obraEncontrada.id_obra; }
             }
 
-            if (isNaN(horas) || !id_obra) {
-                alert('❌ Revisa que las horas sean correctas y hayas seleccionado una obra válida de la lista.');
+            if (!id_obra) {
+                alert('⚠️ Por favor, selecciona una obra válida haciendo clic en los resultados de la búsqueda.');
                 return;
             }
 
+            const fecha = document.getElementById('inputFechaPropio').value;
+            const horas = document.getElementById('inputHorasPropio').value;
+            const tareas = document.getElementById('inputTareasPropio').value;
+
+            btn.disabled = true;
+            btn.textContent = 'Registrando...';
+            feedback.classList.add('hidden');
+
             try {
-                const respuesta = await fetch(`/api/partes/${idParte}`, {
-                    method: 'PUT',
+                const res = await fetch('/api/partes', {
+                    method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ horas, tareas, id_obra: parseInt(id_obra), fecha })
+                    body: JSON.stringify({ id_usuario: idEncargado, id_obra: parseInt(id_obra), fecha, horas, tareas })
                 });
-
-                const resultado = await respuesta.json();
-                if (resultado.success) {
-                    alert('✅ ¡Parte modificado correctamente!');
-                    cerrarModalEdicion();
-                    const idEncargado = localStorage.getItem('usuario_id');
-                    await cargarPartesCuadrilla(idEncargado);
+                
+                const data = await res.json();
+                if (data.success) {
+                    feedback.textContent = `✅ Tu parte se ha registrado con éxito.`;
+                    feedback.className = 'p-2 text-xs font-semibold rounded text-center bg-green-50 text-green-700 block mb-2';
+                    document.getElementById('inputTareasPropio').value = '';
+                    document.getElementById('buscadorObraPropioInput').value = '';
+                    document.getElementById('selectObraPropio').value = '';
+                    filtrarObrasPropio('');
+                    await cargarPartesCuadrilla(idEncargado); 
                 } else {
-                    alert('❌ Error al modificar el parte: ' + (resultado.error || ''));
+                    feedback.textContent = '⚠️ Error al guardar tu parte.';
+                    feedback.className = 'p-2 text-xs font-semibold rounded text-center bg-amber-50 text-amber-700 block mb-2';
                 }
             } catch (error) {
-                console.error('Error de conexión al editar:', error);
-                alert('❌ No se pudo conectar con el servidor.');
-            }
-        }
-
-        async function eliminarParte(idParte) {
-            if (!confirm("⚠️ ¿Estás seguro de que deseas eliminar este parte?")) {
-                return;
-            }
-            if (!confirm("❌ Esta acción es irreversible. Haz clic en Aceptar para confirmar la eliminación.")) {
-                return;
+                feedback.textContent = '❌ Error de conexión.';
+                feedback.className = 'p-2 text-xs font-semibold rounded text-center bg-red-50 text-red-700 block mb-2';
             }
 
-            try {
-                const respuesta = await fetch(`/api/partes/${idParte}`, {
-                    method: 'DELETE'
-                });
-
-                const resultado = await respuesta.json();
-                if (resultado.success) {
-                    alert('✅ ¡Parte eliminado correctamente!');
-                    const idEncargado = localStorage.getItem('usuario_id');
-                    await cargarPartesCuadrilla(idEncargado);
-                } else {
-                    alert('❌ Error al eliminar el parte: ' + (resultado.error || 'No se pudo completar'));
-                }
-            } catch (error) {
-                console.error('Error de conexión al eliminar:', error);
-                alert('❌ No se pudo conectar con el servidor.');
-            }
+            btn.disabled = false;
+            btn.textContent = '✅ Registrar Mi Parte';
         }
 
         async function enviarParteEncargado(e) {
@@ -468,6 +438,161 @@
 
             btn.disabled = false;
             btn.textContent = '🚀 Registrar Parte Masivo';
+        }
+
+        async function cargarPartesCuadrilla(idEncargado) {
+            try {
+                const res = await fetch(`/api/encargado/${idEncargado}/partes`);
+                const data = await res.json();
+
+                if (data.success) {
+                    partesGlobal = data.partes;
+                    paginaActual = 1;
+                    renderizarTablaPartes();
+                }
+            } catch (error) {
+                console.error("Error cargando partes:", error);
+            }
+        }
+
+        function renderizarTablaPartes() {
+            const contenedor = document.getElementById('listaPartesCuadrilla');
+            const contenedorPaginacion = document.getElementById('paginacionContenedor');
+            contenedor.innerHTML = '';
+
+            if (partesGlobal.length === 0) {
+                contenedor.innerHTML = '<div class="p-6 bg-gray-50 text-center text-sm text-gray-500 border rounded-lg">No hay partes registrados recientes en tu cuadrilla.</div>';
+                contenedorPaginacion.classList.add('hidden');
+                return;
+            }
+
+            contenedorPaginacion.classList.remove('hidden');
+
+            const totalPaginas = Math.ceil(partesGlobal.length / elementosPorPagina);
+            if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+            if (paginaActual < 1) paginaActual = 1;
+
+            const inicio = (paginaActual - 1) * elementosPorPagina;
+            const fin = inicio + elementosPorPagina;
+            const partesPagina = partesGlobal.slice(inicio, fin);
+
+            partesPagina.forEach(p => {
+                const fechaFormateada = new Date(p.fecha).toLocaleDateString('es-ES');
+                const fechaLimpia = p.fecha ? p.fecha.split('T')[0] : new Date().toISOString().split('T')[0];
+                const nombreObraSeguro = (p.obra_nombre || '').replace(/'/g, "\\'");
+                const tareasSeguras = (p.tareas || '').replace(/'/g, "\\'");
+                const esPartePropio = p.operario_nombre === localStorage.getItem('usuario_nombre');
+                const highlight = esPartePropio ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200';
+
+                contenedor.innerHTML += `
+                    <div class="border rounded-lg p-4 ${highlight} hover:shadow-sm transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 relative">
+                        <div>
+                            <div class="font-bold text-gray-800 text-sm">${p.operario_nombre} ${esPartePropio ? '<span class="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded ml-2">Mi Parte</span>' : ''}</div>
+                            <div class="text-xs font-semibold text-[#004b87]">🏗️ ${p.obra_nombre} <span class="text-gray-400 font-normal">| 📅 ${fechaFormateada}</span></div>
+                            <div class="text-xs text-gray-600 mt-1 bg-white/50 p-2 rounded border">${p.tareas}</div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="bg-blue-100 text-[#004b87] px-3 py-1.5 rounded-lg font-black text-sm shrink-0">
+                                ${p.horas}h
+                            </div>
+                            <button onclick="abrirModalEditar(${p.id_parte}, ${p.horas}, '${tareasSeguras}', ${p.id_obra}, '${nombreObraSeguro}', '${fechaLimpia}')" class="bg-yellow-50 hover:bg-yellow-100 text-[#004b87] border border-yellow-200 p-2 rounded-lg text-xs font-bold transition" title="Editar parte">✏️</button>
+                            <button onclick="eliminarParte(${p.id_parte})" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 p-2 rounded-lg text-xs font-bold transition" title="Eliminar parte">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('textoPaginacion').textContent = `Página ${paginaActual} de ${totalPaginas || 1}`;
+            document.getElementById('btnAnterior').disabled = paginaActual === 1;
+            document.getElementById('btnSiguiente').disabled = paginaActual >= totalPaginas;
+        }
+
+        function cambiarPagina(direccion) {
+            paginaActual += direccion;
+            renderizarTablaPartes();
+        }
+
+        function abrirModalEditar(idParte, horas, tareas, idObraActual, nombreObraActual, fechaActual) {
+            document.getElementById('modalIdParte').value = idParte;
+            document.getElementById('modalHoras').value = horas;
+            document.getElementById('modalTareas').value = tareas;
+            document.getElementById('buscadorObraInput').value = nombreObraActual;
+            document.getElementById('modalIdObraSeleccionada').value = idObraActual;
+            document.getElementById('modalFechaParte').value = fechaActual;
+
+            filtrarObrasModal('');
+            document.getElementById('modalEditarParte').classList.remove('hidden');
+        }
+
+        function cerrarModalEdicion() {
+            document.getElementById('modalEditarParte').classList.add('hidden');
+        }
+
+        async function guardarEdicionParteModal() {
+            const idParte = document.getElementById('modalIdParte').value;
+            const horas = parseFloat(document.getElementById('modalHoras').value);
+            const tareas = document.getElementById('modalTareas').value;
+            let id_obra = document.getElementById('modalIdObraSeleccionada').value;
+            const fecha = document.getElementById('modalFechaParte').value;
+
+            if (!id_obra) {
+                const textoEscrito = document.getElementById('buscadorObraInput').value.trim();
+                const obraEncontrada = listaObrasGlobal.find(o => o.nombre.toLowerCase().trim() === textoEscrito.toLowerCase());
+                if (obraEncontrada) { id_obra = obraEncontrada.id_obra; }
+            }
+
+            if (isNaN(horas) || !id_obra) {
+                alert('❌ Revisa que las horas sean correctas y hayas seleccionado una obra válida de la lista.');
+                return;
+            }
+
+            try {
+                const respuesta = await fetch(`/api/partes/${idParte}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ horas, tareas, id_obra: parseInt(id_obra), fecha })
+                });
+
+                const resultado = await respuesta.json();
+                if (resultado.success) {
+                    alert('✅ ¡Parte modificado correctamente!');
+                    cerrarModalEdicion();
+                    const idEncargado = localStorage.getItem('usuario_id');
+                    await cargarPartesCuadrilla(idEncargado);
+                } else {
+                    alert('❌ Error al modificar el parte: ' + (resultado.error || ''));
+                }
+            } catch (error) {
+                console.error('Error de conexión al editar:', error);
+                alert('❌ No se pudo conectar con el servidor.');
+            }
+        }
+
+        async function eliminarParte(idParte) {
+            if (!confirm("⚠️ ¿Estás seguro de que deseas eliminar este parte?")) {
+                return;
+            }
+            if (!confirm("❌ Esta acción es irreversible. Haz clic en Aceptar para confirmar la eliminación.")) {
+                return;
+            }
+
+            try {
+                const respuesta = await fetch(`/api/partes/${idParte}`, {
+                    method: 'DELETE'
+                });
+
+                const resultado = await respuesta.json();
+                if (resultado.success) {
+                    alert('✅ ¡Parte eliminado correctamente!');
+                    const idEncargado = localStorage.getItem('usuario_id');
+                    await cargarPartesCuadrilla(idEncargado);
+                } else {
+                    alert('❌ Error al eliminar el parte: ' + (resultado.error || 'No se pudo completar'));
+                }
+            } catch (error) {
+                console.error('Error de conexión al eliminar:', error);
+                alert('❌ No se pudo conectar con el servidor.');
+            }
         }
 
         function cerrarSesion() { 
