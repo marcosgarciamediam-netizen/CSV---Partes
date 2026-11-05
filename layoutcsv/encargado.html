@@ -166,17 +166,27 @@
                 const contenedorOps = document.getElementById('contenedorCheckboxesOperarios');
                 contenedorOps.innerHTML = '';
                 
+                // 1. Insertar siempre al encargado primero (con un diseño destacado en amarillo)
+                const nombreEncargado = localStorage.getItem('usuario_nombre') || 'Mi usuario';
+                contenedorOps.innerHTML += `
+                    <label class="flex items-center gap-2 text-xs text-[#004b87] cursor-pointer font-extrabold mb-2 pb-2 border-b border-gray-200 bg-yellow-50 p-2 rounded-lg">
+                        <input type="checkbox" name="operariosSeleccionados" value="${idEncargado}" class="rounded border-gray-300 w-4 h-4 text-[#004b87] focus:ring-[#004b87]" />
+                        <span>🙋‍♂️ ${nombreEncargado} (Mi propio parte)</span>
+                    </label>
+                `;
+
+                // 2. Rellenar el resto de la plantilla asignada
                 if (dataPlantilla.success && dataPlantilla.plantilla.length > 0) {
                     dataPlantilla.plantilla.forEach(op => {
                         contenedorOps.innerHTML += `
-                            <label class="flex items-center gap-2 text-xs text-gray-700 cursor-pointer font-medium">
+                            <label class="flex items-center gap-2 text-xs text-gray-700 cursor-pointer font-medium px-2 py-1 hover:bg-gray-100 rounded transition">
                                 <input type="checkbox" name="operariosSeleccionados" value="${op.id_usuario}" class="rounded border-gray-300 text-[#004b87] focus:ring-[#004b87]" />
                                 <span>${op.nombre} (${op.categoria || 'General'})</span>
                             </label>
                         `;
                     });
                 } else {
-                    contenedorOps.innerHTML = '<div class="text-xs text-red-500">No tienes operarios asignados en tu plantilla.</div>';
+                    contenedorOps.innerHTML += '<div class="text-xs text-gray-500 px-2 mt-2">No tienes más operarios asignados en tu plantilla.</div>';
                 }
 
                 const resObras = await fetch('/api/obras');
