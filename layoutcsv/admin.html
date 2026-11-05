@@ -287,8 +287,10 @@
                 <!-- 5. VISTA: ASIGNACIONES -->
                 <section id="seccion-asignaciones" class="vista-panel hidden space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <!-- Panel de Asignación Masiva a Encargados -->
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
-                            <h2 class="text-lg font-bold text-[#004b87]">Asignar Trabajador a Encargado</h2>
+                            <h2 class="text-lg font-bold text-[#004b87]">Asignar Trabajadores a Encargado</h2>
                             <form onsubmit="asignarOperarioEncargado(event)" class="space-y-3">
                                 <div>
                                     <label class="block text-xs font-bold text-gray-600 mb-1">Seleccionar Encargado Principal</label>
@@ -296,16 +298,26 @@
                                         <option value="">Cargando encargados...</option>
                                     </select>
                                 </div>
+                                
                                 <div>
-                                    <label class="block text-xs font-bold text-gray-600 mb-1">Seleccionar Trabajador (Operario o Encargado)</label>
-                                    <select id="selectOperarioAsignar" class="w-full border border-gray-300 p-2 rounded-lg text-sm bg-white outline-none" required>
-                                        <option value="">Cargando trabajadores...</option>
-                                    </select>
+                                    <div class="flex justify-between items-end mb-1">
+                                        <label class="block text-xs font-bold text-gray-600">Seleccionar Trabajadores (Bulk)</label>
+                                        <button type="button" onclick="seleccionarTodosTrabajadoresAsignacion(true)" class="text-[10px] font-bold text-blue-600 hover:underline">Seleccionar todos</button>
+                                    </div>
+                                    <!-- Contenedor para checkboxes dinámicos -->
+                                    <div id="contenedorCheckboxesTrabajadores" class="border border-gray-300 p-2 rounded-lg max-h-40 overflow-y-auto bg-white space-y-1 text-sm">
+                                        <span class="text-gray-400 text-xs">Cargando trabajadores...</span>
+                                    </div>
+                                    <div class="flex justify-end mt-1">
+                                        <button type="button" onclick="seleccionarTodosTrabajadoresAsignacion(false)" class="text-[10px] text-gray-500 hover:underline">Desmarcar todos</button>
+                                    </div>
                                 </div>
+
                                 <button type="submit" class="w-full bg-[#ffcc00] text-[#004b87] font-bold text-xs py-2.5 rounded-lg shadow hover:bg-yellow-400 transition">
-                                    🔗 Asignar a Cuadrilla
+                                    🔗 Asignar Masivamente a Cuadrilla
                                 </button>
                             </form>
+                            
                             <div class="pt-4 border-t">
                                 <h3 class="text-xs font-bold text-gray-700 uppercase mb-2">Asignaciones de Plantilla Actuales</h3>
                                 <div id="tablaAsignacionesPlantilla" class="space-y-2 max-h-48 overflow-y-auto text-xs">
@@ -1396,24 +1408,43 @@
             try { await fetch(`/api/admin/usuarios/${idUsuario}/estado`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo: nuevoEstado }) }); cargarUsuariosAdmin(); } catch(err) { console.error(err); }
         }
 
+        function seleccionarTodosTrabajadoresAsignacion(marcar) {
+            const checkboxes = document.querySelectorAll('input[name="trabajadoresAsignar"]');
+            checkboxes.forEach(cb => cb.checked = marcar);
+        }
+
         async function cargarDatosAsignaciones() {
             try {
                 const resUsers = await fetch('/api/admin/usuarios-todos');
                 const dataUsers = await resUsers.json();
                 if (dataUsers.success) {
                     const selEncargado = document.getElementById('selectEncargado');
-                    const selOperario = document.getElementById('selectOperarioAsignar');
+                    const contenedorTrabajadores = document.getElementById('contenedorCheckboxesTrabajadores');
                     const selJefe = document.getElementById('selectJefeObra');
 
                     selEncargado.innerHTML = '<option value="">-- Selecciona Encargado Principal --</option>';
-                    selOperario.innerHTML = '<option value="">-- Selecciona Trabajador (Operario o Encargado) --</option>';
+                    contenedorTrabajadores.innerHTML = '';
                     selJefe.innerHTML = '<option value="">-- Selecciona Jefe de Obra --</option>';
 
                     dataUsers.usuarios.forEach(u => {
+                        // Poblar selects normales
                         if (u.rol === 'encargado') selEncargado.innerHTML += `<option value="${u.id_usuario}">${u.nombre}</option>`;
-                        if (u.rol === 'operario' || u.rol === 'encargado') selOperario.innerHTML += `<option value="${u.id_usuario}">${u.nombre} (${u.codigo_operario || 'Sin Cód'}) - ${u.rol.toUpperCase()}</option>`;
                         if (u.rol === 'JEFE_DE_OBRA' || u.rol === 'jefe_de_obra' || u.rol === 'jefedeobra') selJefe.innerHTML += `<option value="${u.id_usuario}">${u.nombre}</option>`;
+                        
+                        // Poblar checkboxes para la asignación masiva de plantilla
+                        if (u.rol === 'operario' || u.rol === 'encargado') {
+                            contenedorTrabajadores.innerHTML += `
+                                <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded transition border-b border-gray-100 last:border-0">
+                                    <input type="checkbox" name="trabajadoresAsignar" value="${u.id_usuario}" class="rounded border-gray-300 text-[#004b87] focus:ring-[#004b87]" />
+                                    <span class="text-xs text-gray-700 font-medium">${u.nombre} <span class="text-gray-400">(${u.codigo_operario || 'Sin Cód'}) - ${u.rol.toUpperCase()}</span></span>
+                                </label>
+                            `;
+                        }
                     });
+
+                    if (contenedorTrabajadores.innerHTML === '') {
+                        contenedorTrabajadores.innerHTML = '<span class="text-gray-400 text-xs">No hay trabajadores disponibles.</span>';
+                    }
                 }
 
                 const resObras = await fetch('/api/obras');
@@ -1436,7 +1467,7 @@
                 divP.innerHTML = '';
                 if (dataP.success && dataP.asignaciones.length > 0) {
                     dataP.asignaciones.forEach(a => { divP.innerHTML += `<div class="flex justify-between items-center p-2 bg-gray-50 rounded border"><div><b>${a.encargado_nombre}</b> ➔ ${a.operario_nombre}</div><button onclick="eliminarAsignacionPlantilla(${a.id_asignacion})" class="text-red-600 font-bold hover:underline">Eliminar</button></div>`; });
-                } else { divP.innerHTML = '<span class="text-gray-400">No hay operarios asignados a encargados.</span>'; }
+                } else { divP.innerHTML = '<span class="text-gray-400">No hay trabajadores asignados a encargados.</span>'; }
 
                 const resO = await fetch('/api/admin/asignaciones-obras');
                 const dataO = await resO.json();
@@ -1451,12 +1482,46 @@
         async function asignarOperarioEncargado(e) {
             e.preventDefault();
             const id_encargado = document.getElementById('selectEncargado').value;
-            const id_operario = document.getElementById('selectOperarioAsignar').value;
+            const checkboxes = document.querySelectorAll('input[name="trabajadoresAsignar"]:checked');
+            const idsTrabajadores = Array.from(checkboxes).map(cb => cb.value);
+
+            if (idsTrabajadores.length === 0) {
+                alert('⚠️ Por favor, selecciona al menos un trabajador para asignar.');
+                return;
+            }
+
+            const btnSubmit = e.target.querySelector('button[type="submit"]');
+            btnSubmit.disabled = true;
+            btnSubmit.textContent = 'Asignando...';
+
             try {
-                const res = await fetch('/api/admin/asignaciones-plantilla', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_encargado, id_operario }) });
-                const data = await res.json();
-                if (data.success) { alert('✅ ¡Trabajador asignado al encargado con éxito!'); cargarListasAsignacionesGuardadas(); } else { alert('❌ Error: ' + (data.error || 'No se pudo asignar')); }
-            } catch (err) { console.error(err); }
+                // Ejecutamos las peticiones para cada trabajador seleccionado simultáneamente
+                const promesas = idsTrabajadores.map(id_operario => {
+                    return fetch('/api/admin/asignaciones-plantilla', { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ id_encargado, id_operario }) 
+                    }).then(res => res.json());
+                });
+
+                const resultados = await Promise.all(promesas);
+                const todosExitosos = resultados.every(r => r.success);
+
+                if (todosExitosos) {
+                    alert(`✅ ¡${idsTrabajadores.length} trabajador(es) asignado(s) al encargado con éxito!`);
+                    cargarListasAsignacionesGuardadas();
+                    seleccionarTodosTrabajadoresAsignacion(false); // Limpiar selección tras asignar
+                } else {
+                    alert('⚠️ Algunas asignaciones no pudieron guardarse. Revisa la lista actual.');
+                    cargarListasAsignacionesGuardadas();
+                }
+            } catch (err) { 
+                console.error(err); 
+                alert('❌ Error de conexión al asignar.');
+            }
+
+            btnSubmit.disabled = false;
+            btnSubmit.textContent = '🔗 Asignar Masivamente a Cuadrilla';
         }
 
         async function asignarObraJefe(e) {
